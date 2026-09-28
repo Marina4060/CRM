@@ -867,7 +867,11 @@
   }
   function goStripe(name, args) {
     toast('Opening secure checkout…');
-    return fn(name, args).then(function (r) { location.href = r.url; }).catch(function (e) { toast(e.message, 6000); });
+    return fn(name, args).then(function (r) {
+      // the demo build has no Stripe: it simulates the result and says so
+      if (r.demo) { toast(r.message, 6000); return recheckAccess().then(function () { if (!$('#scr-app').hidden) route(); }); }
+      location.href = r.url;
+    }).catch(function (e) { toast(e.message, 6000); });
   }
   function openPortal() { return goStripe('billing-portal'); }
   function handleCheckoutReturn() {

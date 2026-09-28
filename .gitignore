@@ -2,3 +2,4 @@
 *.orig.html
 MARINA_CRM_*.html
 __pycache__/
+demo/build/
