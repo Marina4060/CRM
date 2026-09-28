@@ -9,7 +9,7 @@
   window.CRM_CONFIG.supabaseAnonKey = 'demo';
   window.CRM_DEMO = true;
   var realFetch = window.fetch.bind(window);
-  var DBKEY = 'demo_db_v1';
+  var DBKEY = 'demo_db_v2';   // v2: starts empty, like the live site
   var DAY = 86400000;
   var LIMIT = { per_user: null, agency_10: 10, agency_20: 20 };
 
@@ -25,47 +25,12 @@
   function save() { try { localStorage.setItem(DBKEY, JSON.stringify(db)); } catch (e) { } }
   function Err(status, message) { this.status = status; this.message = message; }
 
-  // ── sample agency so there is something to look at straight away ──
+  // starts empty, exactly like the live site: people sign up and add their own contacts
   function seed() {
-    var t0 = Date.now();
-    var owner = { id: uid(), email: 'olivia@harbourrealty.demo', password: 'demo1234', full_name: 'Olivia Harper', created_at: iso(t0 - 5 * DAY), trial_ends_at: iso(t0 + 9 * DAY) };
-    var agent = { id: uid(), email: 'sam@harbourrealty.demo', password: 'demo1234', full_name: 'Sam Nguyen', created_at: iso(t0 - 4 * DAY), trial_ends_at: iso(t0 + 10 * DAY) };
-    var team = { id: uid(), name: 'Harbour Realty', created_at: iso(t0 - 5 * DAY), trial_ends_at: owner.trial_ends_at, plan: 'agency_10', seats: 0,
-      subscription_status: null, current_period_end: null, cancel_at_period_end: false, stripe_customer_id: null };
-    var d = function (daysAgo) { var x = new Date(t0 - daysAgo * DAY); return ('0' + x.getDate()).slice(-2) + '/' + ('0' + (x.getMonth() + 1)).slice(-2) + '/' + String(x.getFullYear()).slice(2); };
-    var people = [
-      ['Priya & Dev Sharma', '14 Marine Pde', 'Marine', 'Cottesloe', 'hot', 'Want an appraisal before Christmas. Downsizing.', 1, agent.id, 'call'],
-      ['Tom Whitfield', '3 Ocean View Rd', 'Ocean View', 'Cottesloe', 'appraisal', 'Appraised at $1.45m–$1.55m. Waiting on builder report.', 3, owner.id, 'call'],
-      ['Grace Liu', '27 Marine Pde', 'Marine', 'Cottesloe', 'warm', 'Renting it out now; may sell in autumn.', 2, agent.id, 'sms'],
-      ['Mark & Jo Bennett', '9 Napier St', 'Napier', 'Cottesloe', 'msg', 'Left a message about the sale at no. 11.', 0, owner.id, 'call'],
-      ['Helen Park', '41 Broome St', 'Broome', 'Mosman Park', 'cold', 'Happy where she is for now.', 6, agent.id, 'email'],
-      ['Ravi Patel', '5 Palmerston St', 'Palmerston', 'Mosman Park', 'listed', 'Listed with us 12 days ago, 3 offers so far.', 4, owner.id, 'call'],
-      ['Chloe & Ben Adams', '18 Broome St', 'Broome', 'Mosman Park', 'potential', 'Rang twice, no answer.', 1, agent.id, 'call'],
-      ['Frank Moretti', '2 Napier St', 'Napier', 'Cottesloe', 'sold', 'Sold $1.32m. Ask for a referral.', 10, owner.id, 'sms']
-    ];
-    var type = { call: '📞 Called', sms: '📱 SMS', email: '📧 Emailed' };
-    var contacts = people.map(function (p, i) {
-      var key = p[0].toLowerCase() + '|' + p[1].toLowerCase();
-      var ts = t0 - p[6] * DAY - i * 3600000;
-      return { team_id: team.id, ckey: key,
-        record: { key: key, stage: p[4], date: d(p[6]), apprDate: '', salePrice: '', settledDate: '', note: p[5],
-          ph: '0400 000 ' + String(101 + i), em: p[0].split(' ')[0].toLowerCase() + '@example.com', n: p[0], a: p[1], isNew: true, s: p[2], suburb: p[3] },
-        activity: [{ type: type[p[8]], note: p[5], date: d(p[6]), ts: ts, nextContact: '', by: p[7] }],
-        created_at: iso(t0 - (8 - i) * 3 * 3600000), created_by: p[7], updated_at: iso(ts), updated_by: p[7] };
-    });
-    function profile(u, phone) {
-      return { user_id: u.id, key: 'crm_profile', updated_at: now(),
-        value: JSON.stringify({ name: u.full_name, title: 'Sales Consultant', agency: 'Harbour Realty', phone: phone, email: u.email, website: 'www.harbourrealty.demo', office: '1 Station St, Cottesloe WA 6011', brand: '#185FA5', logo: '' }) };
-    }
-    return {
-      users: [owner, agent], teams: [team],
-      members: [{ team_id: team.id, user_id: owner.id, role: 'owner', joined_at: owner.created_at }, { team_id: team.id, user_id: agent.id, role: 'agent', joined_at: agent.created_at }],
-      invites: [], crm_state: [profile(owner, '0400 111 222'), profile(agent, '0400 333 444')],
-      member_stats: [{ user_id: owner.id, stats: { upcoming: 2, last_activity: iso(t0 - 3600000) }, updated_at: now() },
-        { user_id: agent.id, stats: { upcoming: 1, last_activity: iso(t0 - 2 * 3600000) }, updated_at: now() }],
-      team_contacts: contacts, support: []
-    };
+    return { users: [], teams: [], members: [], invites: [], crm_state: [], member_stats: [], team_contacts: [], support: [] };
   }
+  // an older preview kept sample contacts in this browser: clear them so the demo starts empty
+  try { if (localStorage.getItem('demo_db_v1') !== null) localStorage.clear(); } catch (e) { }
   var db = load() || seed(); save();
   window.CRM_DEMO_RESET = function () { try { localStorage.clear(); } catch (e) { } location.reload(); };
   window.CRM_DEMO_END_TRIAL = function () {
