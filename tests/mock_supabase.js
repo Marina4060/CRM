@@ -146,9 +146,20 @@ async function storage(req, res, url, sub) {
   send(res, 200, fs.readFileSync(APP_FILES[m[1]]), m[1].endsWith('.json') ? 'application/json' : 'text/html');
 }
 
+const cancelled = [];   // subscriptions delete-account would have cancelled in Stripe
 // the Stripe functions, faked: checkout "succeeds" when the test visits /__test/stripe
 async function functions(req, res, url, sub) {
   const body = (await readBody(req)) || {};
+  if (url.pathname.endsWith('/delete-account')) {
+    // as supabase/functions/delete-account, with Stripe's cancel recorded instead of sent
+    if (body.confirm !== 'DELETE') return send(res, 400, { error: 'Type DELETE to confirm.' });
+    try {
+      const chk = (await pool.query('select public.delete_account($1, true) r', [sub])).rows[0].r;
+      if (chk.cancel_subscription) cancelled.push(chk.cancel_subscription);
+      await pool.query('select public.delete_account($1, false)', [sub]);
+      return send(res, 200, { deleted: true });
+    } catch (e) { return send(res, 409, { error: e.message }); }
+  }
   const r = await pool.query("select m.role, t.* from public.team_members m join public.teams t on t.id = m.team_id where m.user_id = $1", [sub]);
   const t = r.rows[0];
   if (!t || t.role !== 'owner') return send(res, 403, { error: 'Only the team owner can manage billing.' });
@@ -189,6 +200,7 @@ http.createServer(async (req, res) => {
         [Number(url.searchParams.get('seats')), url.searchParams.get('team'), url.searchParams.get('plan') || 'per_user']);
       res.writeHead(302, { Location: '/?checkout=success#billing' }); return res.end();
     }
+    if (url.pathname === '/__test/cancelled') return send(res, 200, cancelled);
     if (url.pathname === '/__test/portal') return send(res, 200, '<h1>Stripe billing portal (test)</h1>', 'text/html');
     if (url.pathname === '/config.js') {
       return send(res, 200, fs.readFileSync(path.join(WEB, 'config.js'), 'utf8')

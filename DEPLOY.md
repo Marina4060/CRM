@@ -50,6 +50,7 @@ supabase functions deploy create-checkout
 supabase functions deploy change-plan
 supabase functions deploy set-seats
 supabase functions deploy billing-portal
+supabase functions deploy delete-account
 supabase functions deploy stripe-webhook --no-verify-jwt
 
 supabase secrets set STRIPE_SECRET_KEY=sk_test_... SITE_URL=https://crm.yourdomain.com.au \
@@ -126,6 +127,7 @@ If someone asks for their account to be deleted, delete them in *Authentication 
 - On agency plans, the database credits each new call, text or note to whoever saved it, so nobody can log activity in a teammate's name.
 - The trial is 14 days from when a person signs up. Leaving and re-joining teams doesn't restart it.
 - A team has access while it's in trial, or while it's paying for at least as many seats as it has people. When a card fails (`past_due`), access continues while Stripe retries. After a subscription ends, people can still sign in to download their data, but can't use the CRM.
+- **Deleting an account:** anyone can delete their own account from the account menu (type DELETE to confirm). Their login, their own CRM data, dashboard figures and support messages are deleted at once. A paying owner on their own has the subscription cancelled in Stripe first; an owner with other people must hand over or remove them first. Contacts added to an agency's shared list stay with the agency. Apple requires this for App Store apps.
 - Data of accounts that ended, and of people who are no longer in any team, is deleted by `purge_expired_data` after the retention period (see step 7).
 - These rules are enforced by the database itself (row-level security), not just the website. `supabase/tests/permissions_test.sh` checks them.
 

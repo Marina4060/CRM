@@ -142,3 +142,13 @@ table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
 .legal .back { display: inline-block; margin-top: 18px; }
 .legal .card p { margin: 0; }
 .invite-offer { background: var(--blue-soft); border-radius: 10px; padding: 10px 12px; margin: 0; }
+
+.dlg { border: 0; border-radius: var(--r); padding: 20px 22px; width: min(460px, calc(100% - 32px)); box-shadow: 0 16px 48px rgba(0,0,0,.25); color: var(--ink); background: var(--card); }
+.dlg::backdrop { background: rgba(20,20,18,.45); }
+.dlg h2 { margin: 0; font-size: 18px; }
+.dlg p { margin: 0; line-height: 1.5; }
+.dlg input { display: block; width: 100%; margin-top: 6px; }
+.btn.danger:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
+.menu-pop .menu-danger { color: var(--red); }
+.linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer; }
+.dlg form { display: flex; flex-direction: column; gap: 12px; }

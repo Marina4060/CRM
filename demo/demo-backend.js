@@ -263,6 +263,22 @@
   // ── Stripe, simulated: checkout "completes" straight away ──
   function stripeFn(name, body) {
     var u = me(), t = teamOf(u.id);
+    if (name === 'delete-account') {
+      if (body.confirm !== 'DELETE') throw new Err(400, 'Type DELETE to confirm.');
+      var mm = memberOf(u.id);
+      if (mm && mm.role === 'owner' && count(t.id) > 1) throw new Err(409, 'You own a team with other people. Make someone else the owner, or remove them, before deleting your account.');
+      var mine = function (r) { return r.user_id !== u.id; };
+      db.crm_state = db.crm_state.filter(mine); db.member_stats = db.member_stats.filter(mine); db.support = db.support.filter(mine);
+      db.invites = db.invites.filter(function (i) { return !(i.email.toLowerCase() === u.email.toLowerCase() && !i.accepted_at); });
+      if (mm && mm.role === 'owner') {
+        db.teams = db.teams.filter(function (x) { return x.id !== t.id; });
+        db.team_contacts = db.team_contacts.filter(function (x) { return x.team_id !== t.id; });
+        db.invites = db.invites.filter(function (i) { return i.team_id !== t.id; });
+      }
+      db.members = db.members.filter(mine);
+      db.users = db.users.filter(function (x) { return x.id !== u.id; });
+      return { deleted: true };
+    }
     if (roleOf(u.id) !== 'owner') throw new Err(403, 'Only the team owner can manage billing.');
     var n = count(t.id);
     if (name === 'create-checkout') {

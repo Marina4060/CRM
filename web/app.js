@@ -1035,6 +1035,7 @@
     var a = b.getAttribute('data-act');
     if (a === 'signout') signOut();
     else if (a === 'export') exportData();
+    else if (a === 'delete-account') openDelete();
     else if (a === 'subscribe') goStripe('create-checkout', { plan: ctx.team.plan });
     else if (a === 'share-mine') {
       if (!confirm('Add your earlier contacts to the shared list so the whole team can see them? Contacts the team already has are left as they are.')) return;
@@ -1063,6 +1064,30 @@
     if (paid(ctx.team)) { show('scr-app'); paintChrome(); location.hash = '#billing'; route(); } else goStripe('create-checkout', { plan: ctx.team.plan });
   });
   $('#blocked-portal').addEventListener('click', openPortal);
+
+  // ─────────────── deleting the account ───────────────
+  function openDelete() {
+    var d = $('#delete-dlg');
+    $('#delete-confirm').value = ''; $('#delete-go').disabled = true; $('#delete-err').hidden = true;
+    $('#delete-sub').hidden = !(ctx && ctx.role === 'owner' && ctx.team && paid(ctx.team));
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    $('#delete-confirm').focus();
+  }
+  $('#delete-confirm').addEventListener('input', function () { $('#delete-go').disabled = this.value.trim().toUpperCase() !== 'DELETE'; });
+  $('#delete-go').addEventListener('click', function () {
+    var b = this; b.disabled = true; b.textContent = 'Deleting…'; $('#delete-err').hidden = true;
+    fn('delete-account', { confirm: 'DELETE' }).then(function () {
+      lsDel(S_SESSION); lsDel(S_OWNER); clearLocal(); homePage(); hideBanner();
+      $('#crm-frame').srcdoc = '';
+      session = null; ctx = null;
+      $('#delete-dlg').close();
+      showAuth('signin');
+      toast('Your account and its data have been deleted.', 8000);
+    }).catch(function (e) {
+      $('#delete-err').textContent = e.message; $('#delete-err').hidden = false;
+      b.disabled = false;
+    }).then(function () { b.textContent = 'Delete my account'; });
+  });
 
   function exportData() {
     var done = function (rows) {

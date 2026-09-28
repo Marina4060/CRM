@@ -192,6 +192,22 @@ const serverState = async (email, key) => (await db.query(
   await V.goto(link('signup'));
   check('the link works in the browser where the sign-up started', !!(await crmFrame(V)) && (await V.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id)) === mal.user.id);
 
+  console.log('deleting an account');
+  await V.click('#menu-btn'); await V.click('#menu [data-act=delete-account]');
+  check('delete asks for confirmation first', await V.isVisible('#delete-dlg') && await V.isDisabled('#delete-go'));
+  await V.fill('#delete-confirm', 'delete');
+  check('typing DELETE unlocks the button', await V.isEnabled('#delete-go'));
+  if (SHOTS) await V.screenshot({ path: SHOTS + '/6-delete.png' });
+  await V.click('#delete-go');
+  check('after deleting, back to sign-in with a message', !!(await until(() => V.isVisible('#f-signin'))) && /deleted/.test(await V.textContent('#toast')));
+  check('the account is gone from the database', !(await db.query("select 1 from auth.users where email = 'mallory@else.test'")).rows.length);
+  check('nothing of it is left on the device', (await V.evaluate(() => Object.keys(localStorage).filter((k) => /^crm_|^shell_(session|owner)$/.test(k)).length)) === 0);
+  await A.goto(BASE + '/'); await crmFrame(A);
+  await A.click('#menu-btn'); await A.click('#menu [data-act=delete-account]');
+  await A.fill('#delete-confirm', 'DELETE'); await A.click('#delete-go');
+  check('an owner with a team is told what to do first', !!(await until(async () => /own a team with other people/.test(await A.textContent('#delete-err')))));
+  check('…and nothing was deleted', (await db.query("select 1 from auth.users where id = $1", [team.owner_id || (await db.query("select user_id from public.team_members where team_id = $1 and role = 'owner'", [team.id])).rows[0].user_id])).rows.length === 1);
+
   check('no script errors', errors.length === 0, errors.join('\n       '));
   await browser.close(); await db.end();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

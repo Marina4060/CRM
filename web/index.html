@@ -88,6 +88,7 @@
       <button class="btn" data-act="export">Download my data</button>
       <button class="btn ghost" data-act="signout">Sign out</button>
     </div>
+    <p class="muted small"><button class="linklike" type="button" data-act="delete-account">Delete my account</button></p>
     <p class="muted small">Your contacts are kept safe. Subscribe any time to pick up where you left off.</p>
     <p class="muted small">Questions? <a id="blocked-support" href="#">Contact support</a></p>
   </div>
@@ -113,6 +114,7 @@
         <button data-act="export">Download my data</button>
         <button data-act="install" id="menu-install" hidden>Install app on this device</button>
         <button data-act="signout">Sign out</button>
+        <button data-act="delete-account" class="menu-danger">Delete my account</button>
       </div>
     </div>
   </header>
@@ -190,6 +192,22 @@
     </div>
   </main>
 </section>
+
+<dialog id="delete-dlg" class="dlg" aria-labelledby="delete-title">
+  <form method="dialog" class="stack" id="f-delete">
+    <h2 id="delete-title">Delete my account</h2>
+    <p>This permanently deletes your login, your contacts and notes, your diary and other CRM data, your dashboard figures and your support messages. It can't be undone.</p>
+    <p id="delete-sub" hidden><b>Your subscription is cancelled straight away</b>, with no refund for the rest of this month.</p>
+    <p class="muted small">Contacts you added to an agency's shared list stay with the agency. Invoices stay with Stripe, as tax law requires.</p>
+    <p><button class="btn small" type="button" data-act="export">Download my data first</button></p>
+    <label>Type DELETE to confirm<input id="delete-confirm" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+    <p id="delete-err" class="err" role="alert" hidden></p>
+    <div class="row wrap">
+      <button class="btn danger" type="button" id="delete-go" disabled>Delete my account</button>
+      <button class="btn ghost" type="submit" value="cancel">Keep my account</button>
+    </div>
+  </form>
+</dialog>
 
 <div id="toast" class="toast" role="status" hidden></div>
 

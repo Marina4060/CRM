@@ -66,7 +66,7 @@ export type Team = {
 export const PAID = ["active", "trialing", "past_due"];
 
 // the signed-in user behind the request's access token
-async function userFrom(req: Request): Promise<User> {
+export async function userFrom(req: Request): Promise<User> {
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
   if (!token) throw new HttpError(401, "Please sign in again.");
   const { data, error } = await admin.auth.getUser(token);

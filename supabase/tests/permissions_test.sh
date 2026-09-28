@@ -171,6 +171,19 @@ H=$(user h-gone@test.au); I=$(user i-recent@test.au)
 [ "$("${Q[@]}" -c "select count(*) from public.crm_state where user_id = '$H'")" = 0 ] && ok "someone in no team, untouched for 90 days: deleted" || bad "someone in no team, untouched for 90 days: deleted" "still there"
 [ "$("${Q[@]}" -c "select count(*) from public.crm_state where user_id = '$I'")" = 1 ] && ok "someone in no team who changed data recently: kept" || bad "someone in no team who changed data recently: kept" "gone"
 
+echo "deleting your own account"
+expect "people can't call account deletion directly" "permission denied" "$K" "select public.delete_account('$K')"
+expect "an owner with people in the team is refused" "own a team with other people" "-" "reset role; select public.delete_account('$E', true)"
+"${Q[@]}" -c "insert into public.crm_state (user_id, key, value) values ('$K', 'crm_data_v4', '[1]')" >/dev/null
+"${Q[@]}" -c "select public.delete_account('$K')" >/dev/null
+[ "$("${Q[@]}" -c "select (select count(*) from auth.users where id = '$K') + (select count(*) from public.crm_state where user_id = '$K') + (select count(*) from public.team_members where user_id = '$K')")" = 0 ] && ok "an agent's login, data and membership are deleted" || bad "an agent's login, data and membership are deleted" "rows left"
+"${Q[@]}" -c "update public.teams set stripe_subscription_id = 'sub_j' where id = '$JTEAM'"
+expect "a paying owner on their own is told which subscription to cancel" "sub_j" "-" "reset role; select public.delete_account('$J', true)"
+"${Q[@]}" -c "select public.delete_account('$J')" >/dev/null
+[ "$("${Q[@]}" -c "select count(*) from public.teams where id = '$JTEAM'")" = 0 ] && ok "their team of one goes too" || bad "their team of one goes too" "team left"
+"${Q[@]}" -c "select public.delete_account('$F')" >/dev/null
+[ "$("${Q[@]}" -c "select count(*) from public.team_contacts where team_id = '$ETEAM'")" -ge 0 ] && [ "$("${Q[@]}" -c "select count(*) from auth.users where id = '$F'")" = 0 ] && ok "an agency agent can delete their account" || bad "an agency agent can delete their account" "still there"
+
 echo "app download"
 "${Q[@]}" -c "insert into storage.objects (bucket_id, name) values ('app', 'crm.html')"
 expect "member with access can download the app" "1" "$C" "select count(*) from storage.objects where bucket_id = 'app'"

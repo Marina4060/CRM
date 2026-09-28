@@ -582,6 +582,42 @@ begin
 end $$;
 revoke execute on function public.purge_expired_data(int) from public, anon, authenticated;
 
+-- a person deletes their own account (the delete-account function calls this after
+-- cancelling any subscription in Stripe). dry_run only checks and says what to cancel.
+-- Their own CRM copy, figures, support messages and login go; contacts they added to an
+-- agency's shared list stay with the agency (the agency's own client records).
+create function public.delete_account(uid uuid, dry_run boolean default false) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  m public.team_members;
+  t public.teams;
+  n int;
+begin
+  select * into m from public.team_members where user_id = uid;
+  if found then
+    select * into t from public.teams where id = m.team_id;
+    select count(*) into n from public.team_members where team_id = m.team_id;
+    if m.role = 'owner' and n > 1 then
+      raise exception 'You own a team with other people. Make someone else the owner, or remove them, before deleting your account.';
+    end if;
+  end if;
+  if dry_run then
+    return jsonb_build_object('cancel_subscription',
+      case when m.role = 'owner' and public.team_paid(t) then t.stripe_subscription_id end);
+  end if;
+  delete from public.crm_state where user_id = uid;
+  delete from public.member_stats where user_id = uid;
+  delete from public.support_requests where user_id = uid;
+  delete from public.invites where lower(email) = lower((select email from public.profiles where id = uid)) and accepted_at is null;
+  if m.role = 'owner' then
+    delete from public.teams where id = m.team_id;      -- a team of one: its invites and any shared list go with it
+  end if;
+  delete from auth.users where id = uid;                -- profile and membership go with it
+  return jsonb_build_object('deleted', true);
+end $$;
+revoke execute on function public.delete_account(uuid, boolean) from public, anon, authenticated;
+grant execute on function public.delete_account(uuid, boolean) to service_role;
+
 -- ── the app itself lives in a private bucket ────────────────────────
 insert into storage.buckets (id, name, public) values ('app', 'app', false)
   on conflict (id) do nothing;
