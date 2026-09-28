@@ -160,6 +160,7 @@ const serverState = async (email, key) => (await db.query(
   check('sign-out removes CRM data from the device', (await A2.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('crm_')).length)) === 0);
 
   console.log('the CRM frame only writes for the account it was opened for');
+  await B.reload();
   const gf = await crmFrame(B);
   const owner0 = await B.evaluate(() => localStorage.getItem('shell_owner'));
   await gf.evaluate(() => localStorage.setItem('crm_guard_test', 'mine'));

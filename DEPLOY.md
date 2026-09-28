@@ -134,16 +134,24 @@ If someone asks for their account to be deleted, delete them in *Authentication 
 On a machine with PostgreSQL 16 and Node:
 
 ```
-# the database rules (67 checks)
+# the database rules (78 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (37 + 27 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (45 + 38 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
-PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 &
+PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_hosted.js http://localhost:8787
-PGDATABASE=crm_e2e tests/setup_e2e_db.sh
+kill $MOCK; PGDATABASE=crm_e2e tests/setup_e2e_db.sh     # a fresh database for the next test
+PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_agency.js http://localhost:8787
+kill $MOCK
+
+# the clickable demo: a new user's whole journey (32 checks), and every CRM feature opened (36)
+python3 tools/make_demo.py
+# serve demo/build over http, wrapping page.html in <html><body>…</body></html> as _local.html, then:
+node tests/e2e_demo.js http://localhost:8797/_local.html          # add "" phone for a phone-sized screen
+node tests/e2e_features.js http://localhost:8797/_local.html
 ```
 
-The first browser test covers sign-up, the trial, syncing between a computer and a phone, inviting an agent, keeping agents' data private, the dashboard, roles, subscribing, the Help form, what happens when a subscription ends, and sign-out. The agency test covers trying Agency 10, sharing earlier contacts, an agent seeing and adding to the shared list, two people adding at the same moment, an out-of-date screen not deleting a teammate's work, renaming, the shared dashboard, subscribing, and switching back to Per agent.
+The first browser test covers sign-up, the trial, syncing between a computer and a phone, inviting an agent, keeping agents' data private, the dashboard, roles, subscribing, the Help form, what happens when a subscription ends, sign-out, email links opened in the wrong browser, and the CRM not writing for a signed-out account. The agency test covers trying Agency 10, sharing earlier contacts, an agent seeing and adding to the shared list, two people adding at the same moment, an out-of-date screen not deleting a teammate's work, renaming, the shared dashboard, subscribing, switching back to Per agent, signing out with a second tab open, another person signing in on the same browser, and a removed agent losing the shared list.
