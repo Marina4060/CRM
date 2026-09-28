@@ -121,3 +121,23 @@ table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
   .page { padding: 14px 12px 40px; }
 }
 .grid select { width: auto; margin: 0; padding: 4px 8px; }
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.plan-card h3 { margin: 0 0 4px; font-size: 16px; }
+.plan-card .price { font-size: 18px; font-weight: 700; margin: 4px 0; color: var(--blue-d); }
+.plan-card.on { outline: 2px solid var(--blue); }
+.plan-card .btn { margin-top: 6px; }
+#shared-box { margin: 12px auto; }
+#shared-box p { margin: 0 0 6px; }
+.grid .row select { flex: 0 0 auto; width: auto; }
+/* terms and privacy pages */
+.legal { max-width: 780px; margin: 0 auto; padding: 28px 18px 60px; }
+.legal .brand { margin-bottom: 8px; }
+.legal h1 { font-size: 26px; margin-top: 8px; }
+.legal h2 { font-size: 17px; margin: 26px 0 8px; }
+.legal p, .legal li { line-height: 1.6; }
+.legal ul { padding-left: 20px; }
+.legal .card { margin-top: 16px; }
+.legal table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+.legal th, .legal td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e4df; vertical-align: top; }
+.legal .back { display: inline-block; margin-top: 18px; }
+.legal .card p { margin: 0; }

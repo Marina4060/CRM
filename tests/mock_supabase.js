@@ -95,7 +95,8 @@ async function rest(req, res, url, sub) {
         const rows = Array.isArray(body) ? body : [body]; const cols = Object.keys(rows[0]); const p2 = [];
         const values = rows.map((r) => '(' + cols.map((k) => '$' + p2.push(typeof r[k] === 'object' && r[k] !== null ? JSON.stringify(r[k]) : r[k])).join(', ') + ')').join(', ');
         let sql = 'insert into ' + t + ' (' + cols.map(ident).join(', ') + ') values ' + values;
-        if (q.onConflict && /merge-duplicates/.test(prefer)) {
+        if (q.onConflict && /ignore-duplicates/.test(prefer)) sql += ' on conflict (' + q.onConflict.join(', ') + ') do nothing';
+        else if (q.onConflict && /merge-duplicates/.test(prefer)) {
           sql += ' on conflict (' + q.onConflict.join(', ') + ') do update set ' +
             cols.filter((k) => !q.onConflict.includes(ident(k))).map((k) => ident(k) + ' = excluded.' + ident(k)).join(', ');
         }
@@ -152,9 +153,17 @@ async function functions(req, res, url, sub) {
   const t = r.rows[0];
   if (!t || t.role !== 'owner') return send(res, 403, { error: 'Only the team owner can manage billing.' });
   const name = url.pathname.split('/').pop();
+  const LIMIT = { per_user: null, agency_10: 10, agency_20: 20 };
+  const n = (await pool.query('select count(*)::int n from public.team_members where team_id = $1', [t.id])).rows[0].n;
   if (name === 'create-checkout') {
-    const n = (await pool.query('select count(*)::int n from public.team_members where team_id = $1', [t.id])).rows[0].n;
-    return send(res, 200, { url: '/__test/stripe?team=' + t.id + '&seats=' + n });
+    const plan = body.plan || t.plan;
+    if (LIMIT[plan] && n > LIMIT[plan]) return send(res, 409, { error: 'Your team is too big for that plan.' });
+    return send(res, 200, { url: '/__test/stripe?team=' + t.id + '&plan=' + plan + '&seats=' + (LIMIT[plan] || n) });
+  }
+  if (name === 'change-plan') {
+    if (LIMIT[body.plan] && n > LIMIT[body.plan]) return send(res, 409, { error: 'Your team is too big for that plan.' });
+    await pool.query('update public.teams set plan = $1, seats = $2 where id = $3', [body.plan, LIMIT[body.plan] || n, t.id]);
+    return send(res, 200, { plan: body.plan });
   }
   if (name === 'set-seats') {
     await pool.query('update public.teams set seats = $1 where id = $2', [body.seats, t.id]);
@@ -176,8 +185,8 @@ http.createServer(async (req, res) => {
       return await functions(req, res, url, c.sub);
     }
     if (url.pathname === '/__test/stripe') {   // "pay", then return like Stripe does
-      await pool.query("update public.teams set subscription_status = 'active', seats = $1, stripe_customer_id = 'cus_' || left(id::text, 8), stripe_subscription_id = 'sub_x', current_period_end = now() + interval '30 days' where id = $2",
-        [Number(url.searchParams.get('seats')), url.searchParams.get('team')]);
+      await pool.query("update public.teams set subscription_status = 'active', seats = $1, plan = $3, stripe_customer_id = 'cus_' || left(id::text, 8), stripe_subscription_id = 'sub_x', current_period_end = now() + interval '30 days' where id = $2",
+        [Number(url.searchParams.get('seats')), url.searchParams.get('team'), url.searchParams.get('plan') || 'per_user']);
       res.writeHead(302, { Location: '/?checkout=success#billing' }); return res.end();
     }
     if (url.pathname === '/__test/portal') return send(res, 200, '<h1>Stripe billing portal (test)</h1>', 'text/html');

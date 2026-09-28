@@ -99,6 +99,53 @@ expect "their new team is theirs" '"role": "owner"' "$B" "select public.app_cont
 expect "owner hands over ownership" "" "$A" "select public.transfer_ownership('$C')"
 expect "new owner" '"role": "owner"' "$C" "select public.app_context()"
 
+echo "agency plan: shared contact list"
+E=$(user e-owner@test.au); F=$(user f-agent@test.au); G=$(user g-outsider@test.au)
+as "$E" "select public.app_context()" >/dev/null; as "$G" "select public.app_context()" >/dev/null
+ETEAM=$(as "$E" "select public.my_team_id()" | tail -1)
+expect "per-user team can't use the shared list" "row-level security" "$E" "insert into public.team_contacts (team_id, ckey, record) values ('$ETEAM', 'a|1 st', '{}')"
+expect "owner picks Agency 10 during the trial" "" "$E" "select public.set_trial_plan('agency_10')"
+expect "context reports the shared list" '"shared": true' "$E" "select public.app_context()"
+FTOK=$(as "$E" "select public.create_invite('f-agent@test.au', 'agent')->>'token'" | tail -1)
+as "$F" "select public.app_context('$FTOK')" >/dev/null
+expect "agent can't choose the plan" "Only the team owner" "$F" "select public.set_trial_plan('agency_20')"
+expect "owner adds a shared contact" "" "$E" "insert into public.team_contacts (team_id, ckey, record) values ('$ETEAM', 'sam|4 ocean st', '{\"n\": \"Sam\", \"stage\": \"hot\"}')"
+expect "agent sees the owner's contact" "Sam" "$F" "select record->>'n' from public.team_contacts where team_id = '$ETEAM'"
+expect "agent updates it, and is recorded as the editor" "$F" "$F" "update public.team_contacts set record = record || '{\"stage\": \"warm\"}' where ckey = 'sam|4 ocean st' returning updated_by"
+expect "who added it can't be rewritten" "$E" "$F" "update public.team_contacts set created_by = '$F' where ckey = 'sam|4 ocean st' returning created_by"
+expect "outsider can't see the agency's contacts" "0" "$G" "select count(*) from public.team_contacts"
+GTEAM=$(as "$G" "select public.my_team_id()" | tail -1)
+expect "outsider can't add to the agency's list" "row-level security" "$G" "insert into public.team_contacts (team_id, ckey, record) values ('$ETEAM', 'x|y', '{}')"
+TS=$(( $(date +%s) * 1000 ))
+expect "agent logs a call on the shared contact" "" "$F" "update public.team_contacts set activity = '[{\"type\": \"📞 Called\", \"ts\": $TS, \"by\": \"$F\"}]' where ckey = 'sam|4 ocean st'"
+expect "dashboard counts the agent's calls from the shared list" '"calls7": 1' "$E" "select public.team_dashboard()->'shared'->'by_member'->'$F'"
+expect "dashboard shows the agency pipeline" '"warm": 1' "$E" "select public.team_dashboard()->'shared'->'stages'"
+for i in $(seq 1 8); do as "$E" "select public.create_invite('extra$i@test.au', 'agent')" >/dev/null; done
+expect "Agency 10 stops at 10 people" "covers up to 10 people" "$E" "select public.create_invite('eleventh@test.au', 'agent')"
+expect "can't try a plan smaller than the team" "" "$E" "select public.set_trial_plan('agency_20')"
+"${Q[@]}" -c "update public.teams set trial_ends_at = now() - interval '1 day' where id = '$ETEAM'"
+expect "trial over: shared list is read-only" "row-level security" "$F" "insert into public.team_contacts (team_id, ckey, record) values ('$ETEAM', 'new|1 rd', '{}')"
+expect "trial over: shared list can still be read to export" "1" "$F" "select count(*) from public.team_contacts"
+"${Q[@]}" -c "update public.teams set subscription_status = 'active', seats = 10, plan = 'agency_10' where id = '$ETEAM'"
+expect "paid Agency 10 with 2 people: access" "t" "$F" "select public.has_access('$F')"
+expect "paying team can't switch plan without Stripe" "Use Change plan" "$E" "select public.set_trial_plan('per_user')"
+"${Q[@]}" -c "update public.teams set plan = 'per_user', seats = 2 where id = '$ETEAM'"
+expect "back on per-user: shared list hidden (kept for later)" "0" "$F" "select count(*) from public.team_contacts"
+expect "rows are still there" "1" "-" "reset role; select count(*) from public.team_contacts where team_id = '$ETEAM'"
+
+for i in $(seq 1 20); do as "$G" "select public.create_invite('trialcap$i@test.au', 'agent')" >/dev/null; done
+expect "a trial team stops at 20 people" "up to 20 people" "$G" "select public.create_invite('trialcap21@test.au', 'agent')"
+
+echo "deleting data after an account ends"
+expect "people can't run the clean-up themselves" "permission denied" "$A" "select public.purge_expired_data(0)"
+"${Q[@]}" -c "update public.teams set subscription_status = null, current_period_end = null, trial_ends_at = now() - interval '91 days' where id = '$ETEAM'"
+BEFORE=$("${Q[@]}" -c "select count(*) from public.team_contacts where team_id = '$ETEAM'")
+OUT=$("${Q[@]}" -c "select public.purge_expired_data(90)")
+AFTER=$("${Q[@]}" -c "select count(*) from public.team_contacts where team_id = '$ETEAM'")
+[ "$BEFORE" = 1 ] && [ "$AFTER" = 0 ] && ok "data of a team lapsed over 90 days is deleted" || bad "data of a team lapsed over 90 days is deleted" "before=$BEFORE after=$AFTER $OUT"
+LEFT=$("${Q[@]}" -c "select count(*) from public.crm_state where user_id = '$B'")
+[ "$LEFT" -ge 1 ] && ok "data of teams still in their 90 days is kept" || bad "data of teams still in their 90 days is kept" "rows=$LEFT"
+
 echo "app download"
 "${Q[@]}" -c "insert into storage.objects (bucket_id, name) values ('app', 'crm.html')"
 expect "member with access can download the app" "1" "$C" "select count(*) from storage.objects where bucket_id = 'app'"

@@ -1,6 +1,6 @@
 # Real Estate CRM
 
-**Online version with subscriptions:** see [DEPLOY.md](DEPLOY.md). It covers login, a 14-day free trial, $100 AUD per user per month through Stripe, cloud sync between phone and computer, agency teams with roles and a team dashboard, in-app support, and installing it on a phone.
+**Online version with subscriptions:** see [DEPLOY.md](DEPLOY.md). It covers login and a 14-day free trial, then Stripe billing at $100 AUD per agent per month, or $500 / $1000 AUD per month for agencies of up to 10 / 20 people with a shared contact list. It also covers cloud sync between phone and computer, team roles and a team dashboard, in-app support, installing it on a phone, and draft terms of service and a privacy policy.
 
 The rest of this page is about the single-file version.
 

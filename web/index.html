@@ -72,6 +72,7 @@
 
     <p id="auth-err" class="err" role="alert" hidden></p>
   </div>
+  <p class="muted small"><a href="terms.html">Terms of Service</a> · <a href="privacy.html">Privacy Policy</a></p>
 </section>
 
 <!-- no access: trial over or subscription ended -->
@@ -125,11 +126,12 @@
         <div class="row"><button class="btn small" id="team-rename" hidden>Rename team</button>
           <button class="btn small" id="team-refresh">Refresh</button></div>
       </div>
+      <div id="shared-box" class="card"></div>
       <div id="dash" hidden>
         <div class="tiles" id="dash-tiles"></div>
         <h2>Pipeline by agent</h2>
         <div class="table-wrap"><table class="grid" id="dash-table"></table></div>
-        <p class="muted small">Figures update as each person uses the CRM. Client names and details are never shared with the team.</p>
+        <p class="muted small" id="dash-note"></p>
       </div>
       <h2>People</h2>
       <div class="table-wrap"><table class="grid" id="people"></table></div>
@@ -149,6 +151,9 @@
     <div id="tab-billing" class="tab page" hidden>
       <div class="page-head"><div><h1>Billing</h1><p class="muted" id="price-line"></p></div></div>
       <div class="card stack" id="bill-card"></div>
+      <h2>Plans</h2>
+      <div class="plans" id="plans"></div>
+      <p class="muted small">All prices in Australian dollars. Every new team starts with a 14-day free trial; owners can try any plan during it.</p>
     </div>
 
     <div id="tab-help" class="tab page" hidden>
@@ -164,6 +169,7 @@
             <button class="btn primary" type="submit">Send</button>
           </form>
           <p class="muted small">Or email <a id="support-mail" href="#"></a></p>
+          <p class="muted small"><a href="terms.html" target="_blank">Terms of Service</a> · <a href="privacy.html" target="_blank">Privacy Policy</a></p>
           <div id="my-requests"></div>
         </div>
         <div class="card stack faq">
@@ -171,7 +177,8 @@
           <details><summary>Is my data saved if I lose my phone?</summary><p>Yes. Everything you do in the CRM is saved to your account in the cloud as you work. Sign in on any device to carry on.</p></details>
           <details><summary>Can I use it on my phone like an app?</summary><p id="install-help"></p></details>
           <details><summary>What if I have no signal?</summary><p>Keep working. Changes are kept on the device and sent to the cloud as soon as you're back online. The sync dot at the top shows the status.</p></details>
-          <details><summary>Can my principal see my clients?</summary><p>No. Owners and admins see pipeline numbers and activity counts on the team dashboard, never client names or details.</p></details>
+          <details><summary>Can my principal see my clients?</summary><p>On the <b>Per agent</b> plan, no: owners and admins see pipeline numbers and activity counts, never client names or details. On the <b>Agency</b> plans the whole team works one shared contact list, so everyone in the team sees those contacts. Your diary, appointments, templates and expenses always stay personal.</p></details>
+          <details><summary>What's the difference between the plans?</summary><p><b>Per agent</b> ($100 AUD per agent per month): each agent has their own private contacts. <b>Agency 10</b> ($500 AUD per month, up to 10 people) and <b>Agency 20</b> ($1000 AUD per month, up to 20 people): one shared contact list for the whole agency, so anyone can pick up a lead and see every call, text and note on it. The team owner can switch plans under Billing.</p></details>
           <details><summary>How does billing work?</summary><p id="billing-help"></p></details>
           <details><summary>How do I cancel?</summary><p>The team owner opens <b>Billing → Manage billing</b> and cancels. The team keeps access until the end of the paid month. You can download your data at any time from the account menu.</p></details>
           <details><summary>The CRM's own Backup button</summary><p>Still works, and is a good habit before big imports. It saves a file to your device; your cloud copy is separate.</p></details>

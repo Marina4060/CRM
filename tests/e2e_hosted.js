@@ -123,7 +123,7 @@ const serverState = async (email, key) => (await db.query(
 
   console.log('billing');
   await A.goto(BASE + '/#billing'); await crmFrame(A);
-  check('billing shows price and trial', /\$100 AUD per user per month/.test(await A.textContent('#bill-card')) && /Free trial/.test(await A.textContent('#bill-card')));
+  check('billing shows price and trial', /\$100 AUD per agent/.test(await A.textContent('#bill-card')) && /Free trial/.test(await A.textContent('#bill-card')));
   if (SHOTS) await A.screenshot({ path: SHOTS + '/4-billing.png' });
   await A.click('[data-act=subscribe]');
   await until(() => A.url().includes('checkout=success') || /Subscribed/.test(''), 5000);

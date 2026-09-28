@@ -15,8 +15,23 @@ export const admin: SupabaseClient = createClient(
 
 // the site people use; Stripe sends them back here after paying
 export const SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/$/, "");
-// the $100 AUD per user per month price, created in the Stripe dashboard
-export const PRICE_ID = Deno.env.get("STRIPE_PRICE_ID") ?? "";
+// the three prices, created in the Stripe dashboard
+export type Plan = "per_user" | "agency_10" | "agency_20";
+export const PRICES: Record<Plan, string> = {
+  per_user: Deno.env.get("STRIPE_PRICE_ID") ?? "",          // $100 AUD per person per month
+  agency_10: Deno.env.get("STRIPE_PRICE_AGENCY_10") ?? "",  // $500 AUD per month, up to 10 people
+  agency_20: Deno.env.get("STRIPE_PRICE_AGENCY_20") ?? "",  // $1000 AUD per month, up to 20 people
+};
+export const PLAN_LIMIT: Record<Plan, number | null> = { per_user: null, agency_10: 10, agency_20: 20 };
+export const isPlan = (p: unknown): p is Plan => p === "per_user" || p === "agency_10" || p === "agency_20";
+export function planForPrice(priceId: string | undefined): Plan | null {
+  for (const p of Object.keys(PRICES) as Plan[]) if (PRICES[p] && PRICES[p] === priceId) return p;
+  return null;
+}
+// how many units to put on the subscription: one per person, or one flat agency plan
+export const quantityFor = (plan: Plan, people: number) => plan === "per_user" ? Math.max(1, people) : 1;
+// people the subscription covers
+export const seatsFor = (plan: Plan, quantity: number) => PLAN_LIMIT[plan] ?? quantity;
 
 export const cors = {
   "Access-Control-Allow-Origin": SITE_URL || "*",
@@ -45,6 +60,7 @@ export type Team = {
   stripe_subscription_id: string | null;
   subscription_status: string | null;
   seats: number;
+  plan: Plan;
 };
 
 export const PAID = ["active", "trialing", "past_due"];

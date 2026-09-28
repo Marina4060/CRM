@@ -1,7 +1,8 @@
 // Lets the app open without a connection. Only the app's own files are
 // cached here; account data and the CRM itself are handled by app.js.
-var VERSION = 'shell-v1';
+var VERSION = 'shell-v2';
 var FILES = ['./', 'index.html', 'app.js', 'styles.css', 'config.js', 'manifest.webmanifest',
+  'terms.html', 'privacy.html', 'legal.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

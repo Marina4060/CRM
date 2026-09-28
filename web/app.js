@@ -15,6 +15,15 @@
   var OFFLINE_GRACE_MS = 3 * 24 * 3600 * 1000;   // keep working offline this long after the last check
   var APP_CACHE = 'crm-app-v1';
 
+  var PLANS = C.plans || [
+    { id: 'per_user', name: 'Per agent', price: '$100 AUD per agent / month', people: 'Any number of agents', shared: false,
+      blurb: 'Each agent keeps their own private contacts.' },
+    { id: 'agency_10', name: 'Agency 10', price: '$500 AUD / month', people: 'Up to 10 people', shared: true,
+      blurb: 'One shared contact list the whole agency sees and works.' },
+    { id: 'agency_20', name: 'Agency 20', price: '$1000 AUD / month', people: 'Up to 20 people', shared: true,
+      blurb: 'One shared contact list the whole agency sees and works.' }
+  ];
+  function planInfo(id) { return PLANS.filter(function (p) { return p.id === id; })[0] || PLANS[0]; }
   var ctx = null;         // from app_context(): user, role, team, access
   var session = null;     // {access_token, refresh_token, expires_at, user:{id,email}}
   var appVersion = null;
@@ -213,8 +222,12 @@
     syncState = state;
     var el = $('#sync'); if (!el) return;
     el.className = 'sync' + (state === 'busy' ? ' busy' : state === 'off' ? ' off' : '');
-    $('b', el).textContent = text || (state === 'busy' ? 'Saving…' : state === 'off' ? 'Offline' : 'Synced');
+    $('b', el).textContent = text || (state === 'busy' ? 'Saving…' : state === 'off' ? 'Offline' : isShared() ? 'Synced · shared' : 'Synced');
     el.title = state === 'off' ? 'Offline: changes are kept on this device and sent when you reconnect.' : 'Your CRM is saved to the cloud.';
+  }
+  // a CRM key changed: the contact list goes to the agency on agency plans, everything else to the person's own copy
+  function changed(k) {
+    if (isShared() && SHARED_KEYS.indexOf(k) >= 0) teamSoon(); else markPending(k);
   }
   function markPending(k) {
     if (pending.indexOf(k) < 0) { pending.push(k); lsSet(S_PENDING, pending); }
@@ -224,14 +237,18 @@
   // the CRM runs in a frame on this same site, so each change it saves reaches us as a storage event
   window.addEventListener('storage', function (e) {
     if (!session || !ctx) return;
-    if (e.key === null) { syncKeys().forEach(markPending); Object.keys(known).forEach(markPending); return; }
-    if (isSyncKey(e.key)) { markPending(e.key); statsSoon(e.key); }
+    if (e.key === null) { syncKeys().forEach(changed); Object.keys(known).forEach(changed); return; }
+    if (isSyncKey(e.key)) { changed(e.key); statsSoon(e.key); }
   });
 
   function flush() {
     if (flushing) { clearTimeout(flushTimer); flushTimer = setTimeout(flush, 800); return flushing; }
     if (!pending.length || !session || !ctx) { if (!pending.length) setSync('ok'); return Promise.resolve(); }
     if (!ctx.access) { setSync('off', 'Not saving'); return Promise.resolve(); }
+    if (isShared()) {
+      pending = pending.filter(function (k) { return SHARED_KEYS.indexOf(k) < 0; }); lsSet(S_PENDING, pending);
+      if (!pending.length) { setSync('ok'); return Promise.resolve(); }
+    }
     var keys = pending.slice(), ups = [], dels = [];
     keys.forEach(function (k) {
       var v = localStorage.getItem(k);
@@ -264,6 +281,15 @@
   function pull() {
     // another person signed in on this browser before: start clean, never mix accounts
     if (lsGet(S_OWNER, null) !== ctx.user.id) { clearLocal(); lsSet(S_OWNER, ctx.user.id); }
+    // moving between a private and a shared contact list: drop this device's copy of the other one
+    var mode = isShared() ? 'team:' + ctx.team.id : 'personal';
+    if (lsGet(S_MODE, null) !== mode) {
+      SHARED_KEYS.forEach(function (k) { lsDel(k); delete known[k]; });
+      pending = pending.filter(function (k) { return SHARED_KEYS.indexOf(k) < 0; }); lsSet(S_PENDING, pending);
+      teamSnap = {}; lsDel(S_TEAMSNAP); lsDel(S_TEAMDIRTY);
+      lsSet(S_MODE, mode);
+    }
+    var skip = function (k) { return isShared() && SHARED_KEYS.indexOf(k) >= 0; };
     var first = pending.length ? flush() : Promise.resolve();
     return first.then(function () {
       return rest('GET', '/crm_state?select=key,value,updated_at&user_id=eq.' + ctx.user.id);
@@ -271,31 +297,177 @@
       var onServer = {};
       rows.forEach(function (r) {
         onServer[r.key] = true;
+        if (skip(r.key)) return;                           // the agency's list comes from pullTeam
         if (pending.indexOf(r.key) >= 0) return;          // our newer change wins; it will be sent next
         try { localStorage.setItem(r.key, r.value); } catch (e) { console.warn('storage full', e); }
         known[r.key] = r.updated_at;
       });
       // removed on another device
-      syncKeys().forEach(function (k) { if (!onServer[k] && known[k] && pending.indexOf(k) < 0) { lsDel(k); delete known[k]; } });
+      syncKeys().forEach(function (k) { if (!skip(k) && !onServer[k] && known[k] && pending.indexOf(k) < 0) { lsDel(k); delete known[k]; } });
       // this browser has data the cloud doesn't (e.g. used before signing up): send it up
-      syncKeys().forEach(function (k) { if (!onServer[k] && !known[k]) markPending(k); });
+      syncKeys().forEach(function (k) { if (!skip(k) && !onServer[k] && !known[k]) markPending(k); });
       lsSet(S_KNOWN, known);
+      if (isShared()) return pullTeam();
     });
   }
   function clearLocal() {
     syncKeys().forEach(lsDel);
     pending = []; known = {}; lsDel(S_PENDING); lsDel(S_KNOWN); lsDel(S_LASTOK);
+    teamSnap = {}; teamSeen = {}; lsDel(S_TEAMSNAP); lsDel(S_TEAMDIRTY); lsDel(S_MODE);
   }
   // changes made on another device while this one is open
   function checkRemote() {
     if (!ctx || !ctx.access || document.hidden) return;
+    if (isShared()) checkTeamRemote();
     rest('GET', '/crm_state?select=key,updated_at&user_id=eq.' + ctx.user.id).then(function (rows) {
       var newer = rows.some(function (r) { return pending.indexOf(r.key) < 0 && known[r.key] && r.updated_at > known[r.key]; });
       if (newer) banner('Your CRM was updated on another device.', 'Load changes', function () { reloadCrm(true); });
     }).catch(function () { });
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { checkRemote(); if (pending.length) flush(); } });
-  setInterval(checkRemote, 90000);
+  setInterval(checkRemote, 45000);
+
+  // ─────────────── the agency's shared contact list ───────────────
+  // On agency plans the CRM's contact list (crm_data_v4) and its activity log
+  // (crm_activity_log) belong to the team. Each contact is stored as its own
+  // row, so agents working at the same time don't overwrite each other, and
+  // each call, text or note is tagged with who did it.
+  var SHARED_KEYS = ['crm_data_v4', 'crm_activity_log'];
+  var S_TEAMSNAP = 'shell_team_snap', S_TEAMDIRTY = 'shell_team_dirty', S_MODE = 'shell_mode';
+  var teamSnap = lsGet(S_TEAMSNAP, {});     // ckey -> signature of what the team list last had
+  var teamSeen = {};                         // ckey -> updated_at from the cloud
+  var teamTimer = null, teamPushing = null;
+  // contacts the CRM on this screen actually has: loaded from the agency list or created here.
+  // Only these can be deleted from the agency list, so a CRM holding an out-of-date list can
+  // never delete contacts a teammate added in the meantime.
+  var crmKeys = {};
+  function isShared() { return !!(ctx && ctx.team && ctx.team.shared); }
+
+  // same data, same text: object keys sorted (the database stores them in its own order)
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+    return JSON.stringify(v === undefined ? null : v);
+  }
+  function sig(v) {   // short fingerprint (FNV-1a) so the snapshot stays small
+    var s = canon(v), h = 0x811c9dc5;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return (h >>> 0).toString(36) + ':' + s.length;
+  }
+  function contactKey(r) { return String(r.key || ((r.n || '').toLowerCase().trim() + '|' + (r.a || '').toLowerCase().trim())); }
+  // the CRM's saved list and log -> one row per contact
+  function rowsFrom(data, act, tagAs) {
+    var rows = {};
+    (Array.isArray(data) ? data : []).forEach(function (r, i) {
+      if (!r || typeof r !== 'object') return;
+      var k = contactKey(r); if (k.length < 2 || k === '|' || !r.a) return;   // the CRM can't hold a contact without an address
+      var rec = {}; Object.keys(r).forEach(function (f) { if (f !== 'id') rec[f] = r[f]; });
+      rec.isNew = true; rec.key = k;
+      var idx = r.id != null ? r.id : i;
+      var a = ((act && act[idx]) || []).filter(Boolean).map(function (e) { return e.by ? e : Object.assign({}, e, { by: tagAs }); });
+      rows[k] = { record: rec, activity: a };
+    });
+    return rows;
+  }
+  function teamSoon() {
+    lsSet(S_TEAMDIRTY, true); setSync('busy');
+    clearTimeout(teamTimer); teamTimer = setTimeout(pushTeam, 1200);
+  }
+  function pushTeam() {
+    if (!isShared() || !ctx.access) return Promise.resolve();
+    if (teamPushing) { clearTimeout(teamTimer); teamTimer = setTimeout(pushTeam, 800); return teamPushing; }
+    if (!lsGet(S_TEAMDIRTY, false)) return Promise.resolve();
+    var rows = rowsFrom(lsGet('crm_data_v4', []), lsGet('crm_activity_log', {}), ctx.user.id);
+    var ups = [], dels = [], sigs = {};
+    Object.keys(rows).forEach(function (k) {
+      sigs[k] = sig(rows[k]);
+      if (teamSnap[k] !== sigs[k]) ups.push({ team_id: ctx.team.id, ckey: k, record: rows[k].record, activity: rows[k].activity });
+    });
+    Object.keys(teamSnap).forEach(function (k) { if (!rows[k] && crmKeys[k]) dels.push(k); });
+    if (!ups.length && !dels.length) { lsDel(S_TEAMDIRTY); if (!pending.length) setSync('ok'); return Promise.resolve(); }
+    setSync('busy');
+    var jobs = [];
+    for (var i = 0; i < ups.length; i += 200) {
+      (function (batch) {
+        jobs.push(rest('POST', '/team_contacts?on_conflict=team_id,ckey&select=ckey,updated_at', batch,
+          { prefer: 'resolution=merge-duplicates,return=representation' })
+          .then(function (back) {
+            batch.forEach(function (b) { teamSnap[b.ckey] = sigs[b.ckey]; crmKeys[b.ckey] = true; });
+            (back || []).forEach(function (r) { teamSeen[r.ckey] = r.updated_at; });
+          }));
+      })(ups.slice(i, i + 200));
+    }
+    dels.forEach(function (k) {
+      jobs.push(rest('DELETE', '/team_contacts?team_id=eq.' + ctx.team.id + '&ckey=eq.' + encodeURIComponent(k))
+        .then(function () { delete teamSnap[k]; delete teamSeen[k]; delete crmKeys[k]; }));
+    });
+    teamPushing = Promise.all(jobs).then(function () {
+      lsSet(S_TEAMSNAP, teamSnap); lsDel(S_TEAMDIRTY);
+      setSync(pending.length ? 'busy' : 'ok', pending.length ? null : 'Synced · shared');
+    }).catch(function (e) {
+      lsSet(S_TEAMSNAP, teamSnap);
+      if (e instanceof NetError) setSync('off');
+      else if (e.status === 401 || e.status === 403 || /row-level security/i.test(e.message)) { setSync('off', 'Not saving'); recheckAccess(); }
+      else { setSync('off', 'Sync problem'); console.warn('team sync', e); }
+      clearTimeout(teamTimer); teamTimer = setTimeout(pushTeam, 15000);
+    }).then(function () { teamPushing = null; });
+    return teamPushing;
+  }
+  // the agency's list -> the CRM's saved list and log, oldest first so positions stay put
+  function pullTeam() {
+    return pushTeam().then(function () {
+      return rest('GET', '/team_contacts?select=ckey,record,activity,updated_at&team_id=eq.' + ctx.team.id + '&order=created_at.asc,ckey.asc');
+    }).then(function (rows) {
+      var data = [], act = {};
+      teamSnap = {}; teamSeen = {}; crmKeys = {};
+      rows.forEach(function (r) {
+        if (!r.record || !r.record.a) return;
+        var i = data.length;
+        data.push(Object.assign({}, r.record, { id: i, key: r.ckey, isNew: true }));
+        crmKeys[r.ckey] = true;
+        if (r.activity && r.activity.length) act[i] = r.activity;
+        teamSnap[r.ckey] = sig({ record: Object.assign({}, r.record, { key: r.ckey, isNew: true }), activity: r.activity || [] });
+        teamSeen[r.ckey] = r.updated_at;
+      });
+      try {
+        localStorage.setItem('crm_data_v4', JSON.stringify(data));
+        localStorage.setItem('crm_activity_log', JSON.stringify(act));
+      } catch (e) { toast('This device is out of storage space for the shared list.', 6000); }
+      lsSet(S_TEAMSNAP, teamSnap); lsDel(S_TEAMDIRTY);
+    });
+  }
+  // teammates' changes while this device is open
+  function checkTeamRemote() {
+    rest('GET', '/team_contacts?select=ckey,updated_at,updated_by&team_id=eq.' + ctx.team.id).then(function (rows) {
+      var seen = {}, n = 0;
+      rows.forEach(function (r) {
+        seen[r.ckey] = true;
+        if (r.updated_by !== ctx.user.id && (!teamSeen[r.ckey] || r.updated_at > teamSeen[r.ckey])) n++;
+      });
+      Object.keys(teamSeen).forEach(function (k) { if (!seen[k]) n++; });
+      if (n) banner(n + ' contact' + (n === 1 ? ' was' : 's were') + ' updated by your team.', 'Load changes', function () { reloadCrm(true); });
+    }).catch(function () { });
+  }
+  // bring a person's own (private) contacts into the agency list; contacts the agency already has are left as they are
+  function sharePersonal() {
+    return rest('GET', '/crm_state?select=key,value&user_id=eq.' + ctx.user.id + '&key=in.("crm_data_v4","crm_activity_log")').then(function (rs) {
+      var v = {}; rs.forEach(function (r) { try { v[r.key] = JSON.parse(r.value); } catch (e) { } });
+      var rows = rowsFrom(v.crm_data_v4 || [], v.crm_activity_log || {}, ctx.user.id);
+      var list = Object.keys(rows).map(function (k) { return { team_id: ctx.team.id, ckey: k, record: rows[k].record, activity: rows[k].activity }; });
+      var jobs = [];
+      for (var i = 0; i < list.length; i += 200) {
+        jobs.push(rest('POST', '/team_contacts?on_conflict=team_id,ckey', list.slice(i, i + 200), { prefer: 'resolution=ignore-duplicates,return=minimal' }));
+      }
+      return Promise.all(jobs).then(function () { return list.length; });
+    });
+  }
+  // how many of your earlier private contacts the shared list doesn't have yet
+  function personalContactCount() {
+    return rest('GET', '/crm_state?select=value&user_id=eq.' + ctx.user.id + '&key=eq.crm_data_v4').then(function (rs) {
+      var rows = {}; try { rows = rowsFrom(rs.length ? JSON.parse(rs[0].value) : [], {}, ctx.user.id); } catch (e) { }
+      return Object.keys(rows).filter(function (k) { return !teamSeen[k]; }).length;
+    }).catch(function () { return 0; });
+  }
 
   // ─────────────── team dashboard figures ───────────────
   // counts only: no client names or details leave the agent's account
@@ -316,6 +488,7 @@
     Object.keys(act).forEach(function (id) {
       var hit7 = false;
       (act[id] || []).forEach(function (e) {
+        if (isShared() && e && e.by && e.by !== ctx.user.id) return;   // shared list: only your own calls and texts
         var ts = Number(e && e.ts) || 0; if (!ts) return;
         if (!s.last_activity || ts > s.last_activity) s.last_activity = ts;
         if (ts >= mo) s.touches30++;
@@ -390,7 +563,7 @@
   function openApp() {
     show('scr-app');
     paintChrome();
-    setSync(pending.length ? 'busy' : 'ok');
+    setSync(pending.length ? 'busy' : 'ok', isShared() ? 'Synced · shared' : null);
     if (pending.length) flush();
     route();
     return loadCrm().then(function () {
@@ -430,6 +603,8 @@
   }
   function reloadCrm(fromCloud) {
     hideBanner();
+    // take the old CRM off the screen first so it can't save an out-of-date list while we fetch
+    $('#crm-frame').srcdoc = '';
     (fromCloud ? pull() : Promise.resolve()).then(loadCrm);
   }
   function checkVersion() {
@@ -496,8 +671,16 @@
     $('#leave-box').hidden = ctx.role === 'owner';
     $('#dash').hidden = !isManager();
     $('#f-invite').role.querySelector('[value=admin]').disabled = !isOwner();
+    paintSharedBox();
     if (isManager()) {
-      rpc('team_dashboard').then(function (d) { paintDashboard(d.members); paintPeople(d.members); paintInvites(d.invites); })
+      rpc('team_dashboard').then(function (d) {
+        var n = d.members.length;
+        $('#team-sub').textContent = 'You are ' + (ctx.role === 'owner' ? 'the owner' : 'an ' + roleName(ctx.role).toLowerCase()) + ' · ' + n + ' ' + (n === 1 ? 'person' : 'people');
+        $('#dash-note').textContent = d.shared
+          ? 'Everyone in the team works the same contact list. "Contacts added" and the activity columns show who did what.'
+          : 'Figures update as each person uses the CRM. Client names and details are never shared with the team.';
+        (d.shared ? paintSharedDashboard(d) : paintDashboard(d.members)); paintPeople(d.members); paintInvites(d.invites);
+      })
         .catch(function (e) { toast(e.message); });
     } else {
       Promise.all([rest('GET', '/team_members?select=user_id,role,joined_at'), rest('GET', '/profiles?select=id,email,full_name')])
@@ -524,6 +707,39 @@
       '<th class="num">People reached 7d</th><th class="num">Appts ahead</th><th>Last activity</th></tr></thead><tbody>' + rows.join('') + '</tbody>';
     $('#dash-tiles').innerHTML = [
       ['Contacts', sum.total], ['Hot leads', sum.hot], ['Appraised', sum.appraisal], ['Listed', sum.listed], ['Sold', sum.sold], ['Activity this week', sum.touches7]
+    ].map(function (x) { return '<div class="tile"><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
+  }
+  // the shared contact list: what it is, and bringing your own contacts into it
+  function paintSharedBox() {
+    var box = $('#shared-box'), t = ctx.team;
+    if (!t.shared) {
+      box.innerHTML = '<p class="muted small">Each person\'s contacts are private.' + (isOwner() ? ' An <a href="#billing">Agency plan</a> gives the whole team one shared contact list.' : '') + '</p>';
+      return;
+    }
+    box.innerHTML = '<p><b>Shared contact list is on</b> (' + esc(planInfo(t.plan).name) + ', ' + esc(planInfo(t.plan).people.toLowerCase()) + '). ' +
+      'Everyone in the team sees and works the same contacts. Diary, appointments, templates and expenses stay personal.</p>' +
+      '<p id="share-mine" class="muted small"></p>';
+    personalContactCount().then(function (n) {
+      if (!n || !$('#share-mine')) return;
+      $('#share-mine').innerHTML = 'You have ' + n + ' contact' + (n === 1 ? '' : 's') + ' from before that ' + (n === 1 ? 'isn\'t' : 'aren\'t') + ' in the shared list yet. ' +
+        '<button class="btn small" data-act="share-mine">Add them to the shared list</button>';
+    });
+  }
+  function paintSharedDashboard(d) {
+    var sh = d.shared || {}, st = sh.stages || {}, by = sh.by_member || {}, sum = { touches7: 0 };
+    var rows = d.members.map(function (m) {
+      var f = by[m.user_id] || {}, s = m.stats || {};
+      sum.touches7 += num(f.touches7);
+      return '<tr><td>' + esc(m.full_name || m.email) + ' <span class="role ' + esc(m.role) + '">' + esc(roleName(m.role)) + '</span></td>' +
+        '<td class="num">' + num(f.added) + '</td>' +
+        ['calls7', 'sms7', 'emails7', 'contacted7'].map(function (k) { return '<td class="num">' + num(f[k]) + '</td>'; }).join('') +
+        '<td class="num">' + num(s.upcoming) + '</td>' +
+        '<td>' + (s.last_activity ? esc(ago(s.last_activity)) : '<span class="muted">—</span>') + '</td></tr>';
+    });
+    $('#dash-table').innerHTML = '<thead><tr><th>Agent</th><th class="num">Contacts added</th><th class="num">Calls 7d</th><th class="num">SMS 7d</th>' +
+      '<th class="num">Emails 7d</th><th class="num">People reached 7d</th><th class="num">Appts ahead</th><th>Last activity</th></tr></thead><tbody>' + rows.join('') + '</tbody>';
+    $('#dash-tiles').innerHTML = [
+      ['Shared contacts', num(sh.total)], ['Hot leads', num(st.hot)], ['Appraised', num(st.appraisal)], ['Listed', num(st.listed)], ['Sold', num(st.sold)], ['Activity this week', sum.touches7]
     ].map(function (x) { return '<div class="tile"><span>' + x[0] + '</span><b>' + x[1] + '</b></div>'; }).join('');
   }
   function paintPeople(members) {
@@ -602,27 +818,52 @@
     else if (new Date(t.trial_ends_at) > new Date()) { status = 'Free trial · ' + daysLeft(t.trial_ends_at) + ' days left'; cls = ''; }
     else { status = t.subscription_status === 'canceled' ? 'Ended' : 'Trial ended'; cls = 'bad'; }
     var colors = { good: 'background:var(--green-soft);color:var(--green)', warn: 'background:var(--amber-soft);color:var(--amber)', bad: 'background:var(--red-soft);color:var(--red)', '': 'background:var(--blue-soft);color:var(--blue-d)' };
+    var pi = planInfo(t.plan);
     var html = '<div class="plan"><div><h2>' + esc(t.name || 'Your team') + '</h2><span class="status" style="' + colors[cls] + '">' + esc(status) + '</span></div></div>' +
       '<dl class="kv">' +
-      '<dt>Price</dt><dd>' + esc(C.priceLabel || '') + '</dd>' +
-      '<dt>People in team</dt><dd>' + t.members + '</dd>' +
-      (paid(t) ? '<dt>Paid seats</dt><dd>' + t.seats + '</dd>' : '') +
+      '<dt>Plan</dt><dd>' + esc(pi.name) + ' · ' + esc(pi.price) + '</dd>' +
+      '<dt>Contacts</dt><dd>' + (t.shared ? 'One shared list for the whole team' : 'Private to each person') + '</dd>' +
+      '<dt>People in team</dt><dd>' + t.members + (t.plan_limit ? ' of ' + t.plan_limit : '') + '</dd>' +
+      (paid(t) && t.plan === 'per_user' ? '<dt>Paid seats</dt><dd>' + t.seats + '</dd>' : '') +
       (paid(t) && t.current_period_end ? '<dt>' + (t.cancel_at_period_end ? 'Access until' : 'Next payment') + '</dt><dd>' + fmtDate(t.current_period_end) + '</dd>' : '') +
       (!paid(t) ? '<dt>Trial ends</dt><dd>' + fmtDate(t.trial_ends_at) + '</dd>' : '') +
       '</dl>';
     if (!owner) {
       html += '<p class="muted">Billing is managed by your team owner.</p>';
     } else if (!paid(t)) {
-      html += '<p>Subscribe now and you won\'t be charged until your free trial ends. You pay for one seat per person; you can change the number of seats at checkout and any time after.</p>' +
-        '<div class="row wrap"><button class="btn primary" data-act="subscribe">Subscribe</button>' + (t.has_billing ? '<button class="btn" data-act="portal">Billing history</button>' : '') + '</div>';
+      html += '<p>Subscribe now and you won\'t be charged until your free trial ends.' + (t.plan === 'per_user' ? ' You pay for one seat per person; you can change the number of seats at checkout and any time after.' : '') + '</p>' +
+        '<div class="row wrap"><button class="btn primary" data-act="subscribe">Subscribe to ' + esc(pi.name) + '</button>' + (t.has_billing ? '<button class="btn" data-act="portal">Billing history</button>' : '') + '</div>';
     } else {
-      html += '<div class="row wrap"><label style="flex:0 0 auto">Seats<input id="seat-n" type="number" min="' + Math.max(1, t.members) + '" max="200" value="' + t.seats + '" style="width:90px"></label>' +
-        '<button class="btn" data-act="seats" style="align-self:flex-end">Change seats</button></div>' +
-        '<p class="muted small">Adding a seat is charged for the rest of this month straight away; removing one gives a credit.</p>' +
-        '<div class="row wrap"><button class="btn primary" data-act="portal">Manage billing</button></div>' +
+      if (t.plan === 'per_user') {
+        html += '<div class="row wrap"><label style="flex:0 0 auto">Seats<input id="seat-n" type="number" min="' + Math.max(1, t.members) + '" max="200" value="' + t.seats + '" style="width:90px"></label>' +
+          '<button class="btn" data-act="seats" style="align-self:flex-end">Change seats</button></div>' +
+          '<p class="muted small">Adding a seat is charged for the rest of this month straight away; removing one gives a credit.</p>';
+      }
+      html += '<div class="row wrap"><button class="btn primary" data-act="portal">Manage billing</button></div>' +
         '<p class="muted small">Update your card, download tax invoices or cancel in Manage billing.</p>';
     }
     card.innerHTML = html;
+    // the plans side by side
+    var plans = $('#plans');
+    plans.innerHTML = PLANS.map(function (p) {
+      var cur = p.id === t.plan, tooBig = p.id !== 'per_user' && t.members > (p.id === 'agency_10' ? 10 : 20);
+      var btn = !owner || cur ? '' : tooBig ? '<p class="muted small">Your team is too big for this plan.</p>'
+        : '<button class="btn' + (paid(t) ? '' : ' primary') + '" data-plan="' + p.id + '">' + (paid(t) ? 'Switch to ' : 'Try ') + esc(p.name) + '</button>';
+      return '<div class="card plan-card' + (cur ? ' on' : '') + '"><h3>' + esc(p.name) + (cur ? ' <span class="role owner">Current</span>' : '') + '</h3>' +
+        '<p class="price">' + esc(p.price) + '</p><p class="muted small">' + esc(p.people) + '</p><p>' + esc(p.blurb) + '</p>' + btn + '</div>';
+    }).join('');
+    $$('[data-plan]', plans).forEach(function (b) { b.onclick = function () { choosePlan(b.getAttribute('data-plan')); }; });
+  }
+  function choosePlan(id) {
+    var t = ctx.team, p = planInfo(id), toShared = p.shared && !t.shared, toPrivate = !p.shared && t.shared;
+    var msg = paid(t) ? 'Switch to ' + p.name + ' (' + p.price + ')? Stripe adjusts this month\'s charge.' : 'Try ' + p.name + ' for the rest of your free trial?';
+    if (toShared) msg += '\n\nEveryone in the team will work from one shared contact list. Each person\'s current contacts stay saved privately, and they can add them to the shared list from the Team page.';
+    if (toPrivate) msg += '\n\nEach person goes back to their own private contacts. The shared list is kept, and comes back if you return to an Agency plan.';
+    if (!confirm(msg)) return;
+    (paid(t) ? fn('change-plan', { plan: id }) : rpc('set_trial_plan', { new_plan: id }))
+      .then(function () { toast('Plan changed to ' + p.name + '.'); return start(); })
+      .then(function () { location.hash = toShared ? '#team' : '#billing'; })
+      .catch(function (e) { toast(e.message, 6000); });
   }
   function goStripe(name, args) {
     toast('Opening secure checkout…');
@@ -650,7 +891,7 @@
     $('#support-mail').textContent = C.supportEmail || ''; $('#support-mail').href = 'mailto:' + (C.supportEmail || '');
     $('#install-help').innerHTML = installHelpText();
     $('#billing-help').textContent = 'Every new account gets ' + (C.trialDays || 14) + ' days free. After that it\'s ' + (C.priceLabel || '') +
-      ', paid by the team owner by card. Solo agents are a team of one.';
+      ', paid by the team owner by card: $100 per agent (contacts private to each agent), or for agencies $500 for up to 10 people or $1000 for up to 20, with one shared contact list. Solo agents are a team of one.';
     rest('GET', '/support_requests?select=created_at,topic,message,status&order=created_at.desc&limit=5').then(function (rows) {
       $('#my-requests').innerHTML = rows.length ? '<h2>Your recent messages</h2>' + rows.map(function (r) {
         return '<p class="small"><b>' + fmtDate(r.created_at) + '</b> · ' + esc(r.status) + '<br>' + esc(r.message.slice(0, 140)) + (r.message.length > 140 ? '…' : '') + '</p>';
@@ -692,7 +933,13 @@
     var a = b.getAttribute('data-act');
     if (a === 'signout') signOut();
     else if (a === 'export') exportData();
-    else if (a === 'subscribe') goStripe('create-checkout');
+    else if (a === 'subscribe') goStripe('create-checkout', { plan: ctx.team.plan });
+    else if (a === 'share-mine') {
+      if (!confirm('Add your earlier contacts to the shared list so the whole team can see them? Contacts the team already has are left as they are.')) return;
+      b.disabled = true;
+      sharePersonal().then(function (n) { toast(n + ' contact' + (n === 1 ? '' : 's') + ' added to the shared list.', 5000); reloadCrm(true); location.hash = '#crm'; })
+        .catch(function (e2) { b.disabled = false; toast(e2.message, 6000); });
+    }
     else if (a === 'portal') openPortal();
     else if (a === 'seats') {
       var n = parseInt($('#seat-n').value, 10);
@@ -711,7 +958,7 @@
     else if (a === 'install' && installPrompt) { installPrompt.prompt(); installPrompt = null; $('#menu-install').hidden = true; }
   });
   $('#blocked-subscribe').addEventListener('click', function () {
-    if (paid(ctx.team)) { show('scr-app'); paintChrome(); location.hash = '#billing'; route(); } else goStripe('create-checkout');
+    if (paid(ctx.team)) { show('scr-app'); paintChrome(); location.hash = '#billing'; route(); } else goStripe('create-checkout', { plan: ctx.team.plan });
   });
   $('#blocked-portal').addEventListener('click', openPortal);
 
@@ -725,8 +972,12 @@
       document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     };
     (pending.length ? flush() : Promise.resolve()).then(function () {
-      return rest('GET', '/crm_state?select=key,value&user_id=eq.' + ctx.user.id);
-    }).then(done).catch(function () {
+      return Promise.all([rest('GET', '/crm_state?select=key,value&user_id=eq.' + ctx.user.id),
+        ctx.team && ctx.team.shared ? rest('GET', '/team_contacts?select=ckey,record,activity,created_at,updated_at&team_id=eq.' + ctx.team.id) : Promise.resolve(null)]);
+    }).then(function (r) {
+      if (r[1]) r[0].push({ key: 'shared_contact_list', value: JSON.stringify(r[1]) });
+      done(r[0]);
+    }).catch(function () {
       done(syncKeys().map(function (k) { return { key: k, value: localStorage.getItem(k) }; }));
     });
   }

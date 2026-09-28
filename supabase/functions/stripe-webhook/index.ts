@@ -1,7 +1,7 @@
 // Stripe tells us when a subscription starts, renews, changes seats, fails or
 // ends. This is the only thing that records a team's subscription status.
 import Stripe from "npm:stripe@17.7.0";
-import { admin, stripe } from "../_shared/common.ts";
+import { admin, planForPrice, seatsFor, stripe } from "../_shared/common.ts";
 
 const SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 const crypto = Stripe.createSubtleCryptoProvider();
@@ -13,11 +13,15 @@ async function saveSubscription(sub: Stripe.Subscription) {
   // the billing period moved onto the subscription item in newer API versions
   const periodEnd = (sub as unknown as { current_period_end?: number }).current_period_end ??
     (item as unknown as { current_period_end?: number } | undefined)?.current_period_end;
+  // which plan was bought comes from the price, never from anything the customer can edit
+  const plan = planForPrice(item?.price?.id);
+  if (!plan) console.warn("stripe-webhook: unknown price", item?.price?.id);
   const row = {
     stripe_customer_id: customer,
     stripe_subscription_id: sub.id,
     subscription_status: sub.status,
-    seats: sub.status === "canceled" ? 0 : (item?.quantity ?? 0),
+    ...(plan ? { plan } : {}),
+    seats: sub.status === "canceled" || !plan ? 0 : seatsFor(plan, item?.quantity ?? 0),
     current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     cancel_at_period_end: !!sub.cancel_at_period_end,
   };

@@ -10,6 +10,9 @@ handle("set-seats", async (req) => {
   if (!team.stripe_subscription_id || !PAID.includes(team.subscription_status ?? "")) {
     throw new HttpError(409, "Subscribe first; you can choose the number of seats at checkout.");
   }
+  if (team.plan !== "per_user") {
+    throw new HttpError(409, "Agency plans cover a set number of people. Use Change plan to move between them.");
+  }
   if (want < members) {
     throw new HttpError(409, `Your team has ${members} people. Remove someone before going below ${members} seats.`);
   }

@@ -1,12 +1,20 @@
 # Putting the CRM online with subscriptions
 
-This turns the CRM into an online service. People sign up, get a 14-day free trial with no card needed, and then pay **$100 AUD per user per month** by card through Stripe. Their data is saved to the cloud and syncs between phone and computer. Agencies can have a team of agents with roles and a team dashboard.
+This turns the CRM into an online service. People sign up and get a 14-day free trial with no card needed. After that they pay monthly by card through Stripe on one of three plans:
+
+| Plan | Price (AUD) | People | Contacts |
+|---|---|---|---|
+| **Per agent** | $100 per agent per month | any number | private to each agent |
+| **Agency 10** | $500 per month | up to 10 | one shared list for the whole agency |
+| **Agency 20** | $1000 per month | up to 20 | one shared list for the whole agency |
+
+Data is saved to the cloud and syncs between phone and computer. Teams have roles (owner, admin, agent) and a team dashboard. The owner can try any plan during the trial and switch plans later.
 
 ```
-web/                 the website people open (sign in, CRM, Team, Billing, Help)
+web/                 the website people open (sign in, CRM, Team, Billing, Help, terms, privacy)
 index.html           the CRM itself; uploaded to private storage, only paying users can load it
 supabase/migrations  database: accounts, teams, roles, invites, trial, synced data, support
-supabase/functions   Stripe: checkout, change seats, billing portal, webhook
+supabase/functions   Stripe: checkout, change plan, change seats, billing portal, webhook
 tools/publish_app.py rolls out a new CRM version to everyone
 tests/               end-to-end test (see Testing)
 ```
@@ -25,9 +33,12 @@ You need three accounts: **Supabase** (database and logins), **Stripe** (payment
 
 ## 2. Stripe
 
-1. **Product catalogue → Add product:** name it "Real Estate CRM". Give it a **recurring** price of **100.00 AUD per month**, charged per unit (each unit is one user). Copy the price ID (`price_…`).
-   - GST: decide with your accountant whether $100 includes GST. If you're registered, turn on Stripe Tax or set the price as tax-inclusive, and add your ABN under *Settings → Business → Tax details*, so invoices show it.
-2. **Settings → Billing → Customer portal:** allow customers to update their payment method, view invoices, **change quantity** and cancel (cancel at the end of the billing period).
+1. **Product catalogue → Add product:** name it "Real Estate CRM" and add three **recurring monthly** prices in **AUD**. Copy each price ID (`price_…`):
+   - **Per agent:** 100.00 AUD per month, **per unit** (each unit is one agent) → `STRIPE_PRICE_ID`
+   - **Agency 10:** 500.00 AUD per month, flat → `STRIPE_PRICE_AGENCY_10`
+   - **Agency 20:** 1000.00 AUD per month, flat → `STRIPE_PRICE_AGENCY_20`
+   - GST: decide with your accountant whether these prices include GST (and set `gst` in `web/config.js` to match). If you're registered, turn on Stripe Tax or mark the prices tax-inclusive, and add your ABN under *Settings → Business → Tax details*, so invoices show it.
+2. **Settings → Billing → Customer portal:** allow customers to update their payment method, view invoices, **change quantity** and cancel (cancel at the end of the billing period). Plan changes happen inside the app, so switching products in the portal can stay off.
 3. **Developers → API keys:** copy the **secret key** (`sk_test_…` for now).
 
 ## 3. Server functions
@@ -36,11 +47,13 @@ With the [Supabase CLI](https://supabase.com/docs/guides/cli) installed and link
 
 ```
 supabase functions deploy create-checkout
+supabase functions deploy change-plan
 supabase functions deploy set-seats
 supabase functions deploy billing-portal
 supabase functions deploy stripe-webhook --no-verify-jwt
 
-supabase secrets set STRIPE_SECRET_KEY=sk_test_... STRIPE_PRICE_ID=price_... SITE_URL=https://crm.yourdomain.com.au
+supabase secrets set STRIPE_SECRET_KEY=sk_test_... SITE_URL=https://crm.yourdomain.com.au \
+  STRIPE_PRICE_ID=price_... STRIPE_PRICE_AGENCY_10=price_... STRIPE_PRICE_AGENCY_20=price_...
 ```
 
 Then in Stripe, go to **Developers → Webhooks → Add endpoint**:
@@ -50,7 +63,7 @@ Then in Stripe, go to **Developers → Webhooks → Add endpoint**:
 
 ## 4. The website
 
-1. Edit `web/config.js`: `supabaseUrl`, `supabaseAnonKey`, `supportEmail`, and the links to your terms and privacy pages.
+1. Edit `web/config.js`: `supabaseUrl`, `supabaseAnonKey`, `supportEmail`, and the `legal` section. The terms of service and privacy policy fill in your business name, ABN, address, privacy contact email, state, GST wording and start date from there.
 2. Deploy the `web/` folder to Netlify or Cloudflare Pages. With Netlify you can drag and drop the folder, then connect your domain. HTTPS is required for installing it as a phone app.
 
 ## 5. Upload the CRM
@@ -70,7 +83,19 @@ Do the same whenever you change the CRM. Everyone gets the new version the next 
 4. **Billing → Subscribe:** pay with Stripe's test card `4242 4242 4242 4242` (any future date, any CVC). The top bar should change to *Subscribed*.
 5. Open **Manage billing**, cancel, and check the app shows when access ends.
 
-When everything works, switch Stripe to live mode: create the product and webhook again in live mode, and set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` to the live values.
+6. **Agency plan:** under **Billing**, click *Try Agency 10*. Sign in as the invited agent in another browser: you should both see and edit the same contacts. When one of you adds a contact, the other gets a *"contacts were updated by your team"* note.
+
+When everything works, switch Stripe to live mode: create the product, the three prices and the webhook again in live mode, and set `STRIPE_SECRET_KEY`, the three price IDs and `STRIPE_WEBHOOK_SECRET` to the live values.
+
+## 7. Deleting data after accounts end
+
+The privacy policy promises that data is deleted 90 days after a team's trial or subscription ends. Turn on the daily clean-up once: in Supabase, go to *Database → Extensions*, enable **pg_cron**, then run this in the SQL Editor:
+
+```
+select cron.schedule('purge-expired-crm-data', '30 3 * * *', 'select public.purge_expired_data(90)');
+```
+
+If someone asks for their account to be deleted, delete them in *Authentication → Users*. Their data is removed with them.
 
 ## Running the service
 
@@ -81,15 +106,19 @@ When everything works, switch Stripe to live mode: create the product and webhoo
 
 ## Before you launch
 
-- **Terms of service and a privacy policy.** Agents will store their clients' personal information, so your policy needs to cover the Australian Privacy Principles: what's stored, where (Sydney), who can see it, and how people get it deleted. Link both pages in `web/config.js`.
+- **Terms of service and privacy policy:** drafts are in `web/terms.html` and `web/privacy.html`, written for Australian law (Privacy Act and APPs, Spam Act, Do Not Call Register, Australian Consumer Law, Notifiable Data Breaches). Fill in the `legal` details in `web/config.js`, and **have a lawyer review both before launch**. Check that the service providers listed in the privacy policy match the ones you actually use (e.g. your email sender and website host).
 - An ABN on invoices, and a decision on GST (see step 2).
 - A support email address you check.
 
 ## How access works
 
 - Every account is part of a team. A solo agent is a team of one, and they are its **owner**.
-- **Owner:** billing, seats, roles and invites. **Admin:** invites agents and sees the team dashboard. **Agent:** their own CRM only.
-- Each agent's contacts are private to them. The team dashboard shows counts only (contacts, hot leads, appraisals, listings, sales, calls and texts this week), never client names or details.
+- **Owner:** billing, plan, seats, roles and invites. **Admin:** invites agents and sees the team dashboard. **Agent:** the CRM.
+- **Per agent plan:** each agent's contacts are private to them. The team dashboard shows counts only (contacts, hot leads, appraisals, listings, sales, calls and texts this week), never client names or details.
+- **Agency plans:** the contact list and each contact's activity (calls, texts, notes) are shared by everyone in the team. Each contact is saved separately, so two agents working at the same time don't overwrite each other. If both edit the *same* contact at once, the later save wins. Every call, text and note records who made it, and the dashboard shows each agent's contacts added and activity. Diary, appointments, templates, expenses, logbook and buyers stay personal.
+- **Moving to an agency plan:** each person's earlier contacts stay private. The Team page offers to add them to the shared list. **Moving back to Per agent:** everyone returns to their own contacts, and the shared list is kept in case you return.
+- **Limits:** Agency 10 allows up to 10 people and Agency 20 up to 20, counting pending invites. A trial team can have up to 20 people.
+- Use the CRM in one browser tab at a time. Two tabs on the same device share one local copy.
 - The trial is 14 days from when a person signs up. Leaving and re-joining teams doesn't restart it.
 - A team has access while it's in trial, or while it's paying for at least as many seats as it has people. When a card fails (`past_due`), access continues while Stripe retries. After a subscription ends, people can still sign in to download their data, but can't use the CRM.
 - These rules are enforced by the database itself (row-level security), not just the website. `supabase/tests/permissions_test.sh` checks them.
@@ -99,14 +128,16 @@ When everything works, switch Stripe to live mode: create the product and webhoo
 On a machine with PostgreSQL 16 and Node:
 
 ```
-# the database rules (42 checks)
+# the database rules (67 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (36 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (37 + 27 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 &
 PGDATABASE=crm_e2e node tests/e2e_hosted.js http://localhost:8787
+PGDATABASE=crm_e2e tests/setup_e2e_db.sh
+PGDATABASE=crm_e2e node tests/e2e_agency.js http://localhost:8787
 ```
 
-The browser test covers sign-up, the trial, syncing between a computer and a phone, inviting an agent, keeping agents' data private, the dashboard, roles, subscribing, the Help form, what happens when a subscription ends, and sign-out.
+The first browser test covers sign-up, the trial, syncing between a computer and a phone, inviting an agent, keeping agents' data private, the dashboard, roles, subscribing, the Help form, what happens when a subscription ends, and sign-out. The agency test covers trying Agency 10, sharing earlier contacts, an agent seeing and adding to the shared list, two people adding at the same moment, an out-of-date screen not deleting a teammate's work, renaming, the shared dashboard, subscribing, and switching back to Per agent.

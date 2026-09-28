@@ -13,3 +13,6 @@ verify_jwt = false
 
 [functions.set-seats]
 verify_jwt = true
+
+[functions.change-plan]
+verify_jwt = true

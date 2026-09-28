@@ -1,6 +1,11 @@
--- Real Estate CRM: accounts, teams and roles, 14-day trial, per-seat Stripe
--- subscription, cloud copy of each agent's CRM, team dashboard figures and
--- support requests.
+-- Real Estate CRM: accounts, teams and roles, 14-day trial, Stripe
+-- subscriptions, cloud copy of each agent's CRM, the agency-wide shared
+-- contact list, team dashboard figures and support requests.
+--
+-- Plans:
+--   per_user   $100 AUD per person per month; each agent's contacts are private
+--   agency_10  $500 AUD per month, up to 10 people, one shared contact list
+--   agency_20  $1000 AUD per month, up to 20 people, one shared contact list
 --
 -- Everyone belongs to exactly one team. A solo agent is a team of one.
 -- Roles: owner (billing, seats, roles), admin (invites agents, sees the team
@@ -25,7 +30,8 @@ create table public.teams (
   stripe_customer_id text unique,
   stripe_subscription_id text,
   subscription_status text,          -- Stripe: trialing, active, past_due, canceled, ...
-  seats int not null default 0,      -- paid seats (subscription quantity)
+  plan text not null default 'per_user' check (plan in ('per_user', 'agency_10', 'agency_20')),
+  seats int not null default 0,      -- people the subscription pays for (per_user: quantity; agency: 10 or 20)
   current_period_end timestamptz,
   cancel_at_period_end boolean not null default false,
   updated_at timestamptz not null default now()
@@ -82,6 +88,23 @@ create table public.support_requests (
   status text not null default 'open' check (status in ('open', 'answered', 'closed'))
 );
 
+-- ── the agency's shared contact list (agency plans) ──────────────────
+-- one row per contact, so agents working at the same time don't overwrite
+-- each other; activity (calls, texts, notes) travels with the contact
+create table public.team_contacts (
+  team_id uuid not null references public.teams (id) on delete cascade,
+  ckey text not null check (length(ckey) between 2 and 600),        -- "name|address", as the CRM keys contacts
+  record jsonb not null check (jsonb_typeof(record) = 'object' and pg_column_size(record) < 65536),
+  activity jsonb not null default '[]'::jsonb
+    check (jsonb_typeof(activity) = 'array' and pg_column_size(activity) < 262144),
+  created_at timestamptz not null default now(),
+  created_by uuid references auth.users (id) on delete set null,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id) on delete set null,
+  primary key (team_id, ckey)
+);
+create index team_contacts_changes on public.team_contacts (team_id, updated_at);
+
 -- ── helpers ─────────────────────────────────────────────────────────
 create function public.touch_updated_at() returns trigger
 language plpgsql as $$
@@ -92,6 +115,21 @@ end $$;
 create trigger teams_touch before update on public.teams for each row execute function public.touch_updated_at();
 create trigger crm_state_touch before update on public.crm_state for each row execute function public.touch_updated_at();
 create trigger member_stats_touch before update on public.member_stats for each row execute function public.touch_updated_at();
+
+-- who added and who last changed a shared contact is recorded by the database, not the app
+create function public.stamp_team_contact() returns trigger
+language plpgsql as $$
+begin
+  if tg_op = 'INSERT' then
+    new.created_at := now(); new.created_by := auth.uid();
+  else
+    new.created_at := old.created_at; new.created_by := old.created_by; new.team_id := old.team_id;
+  end if;
+  new.updated_at := now(); new.updated_by := auth.uid();
+  return new;
+end $$;
+create trigger team_contacts_stamp before insert or update on public.team_contacts
+  for each row execute function public.stamp_team_contact();
 
 create function public.handle_new_user() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -116,7 +154,19 @@ $$;
 
 create function public.team_paid(t public.teams) returns boolean
 language sql immutable as $$
-  select t.subscription_status in ('active', 'trialing', 'past_due');
+  select coalesce(t.subscription_status in ('active', 'trialing', 'past_due'), false);  -- never null: "not paid" must mean not paid
+$$;
+
+-- the most people an agency plan covers (null: per_user, one paid seat each)
+create function public.plan_limit(plan text) returns int
+language sql immutable as $$
+  select case plan when 'agency_10' then 10 when 'agency_20' then 20 end;
+$$;
+
+-- agency plans share one contact list across the team
+create function public.team_shared(t public.teams) returns boolean
+language sql immutable as $$
+  select t.plan in ('agency_10', 'agency_20');
 $$;
 
 -- may this person use the app right now?
@@ -143,6 +193,7 @@ alter table public.invites enable row level security;
 alter table public.crm_state enable row level security;
 alter table public.member_stats enable row level security;
 alter table public.support_requests enable row level security;
+alter table public.team_contacts enable row level security;
 
 -- everything that changes teams, roles, billing or invites goes through the
 -- functions below or the Stripe webhook, never through direct writes
@@ -180,6 +231,23 @@ create policy "write own stats" on public.member_stats for insert to authenticat
   with check (user_id = auth.uid());
 create policy "update own stats" on public.member_stats for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- shared contacts: everyone in an agency-plan team. Reading stays possible
+-- after a subscription ends (to export); changes need access.
+create function public.in_shared_team(tid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.team_members m join public.teams t on t.id = m.team_id
+                 where m.user_id = auth.uid() and t.id = tid and public.team_shared(t));
+$$;
+create policy "agency reads shared contacts" on public.team_contacts for select to authenticated
+  using (public.in_shared_team(team_id));
+create policy "agency adds shared contacts" on public.team_contacts for insert to authenticated
+  with check (public.in_shared_team(team_id) and public.has_access(auth.uid()));
+create policy "agency changes shared contacts" on public.team_contacts for update to authenticated
+  using (public.in_shared_team(team_id))
+  with check (public.in_shared_team(team_id) and public.has_access(auth.uid()));
+create policy "agency removes shared contacts" on public.team_contacts for delete to authenticated
+  using (public.in_shared_team(team_id) and public.has_access(auth.uid()));
 
 create policy "send support request" on public.support_requests for insert to authenticated
   with check (user_id = auth.uid());
@@ -256,6 +324,7 @@ begin
     'team', jsonb_build_object(
       'id', t.id, 'name', t.name, 'trial_ends_at', t.trial_ends_at,
       'subscription_status', t.subscription_status, 'seats', t.seats, 'members', n,
+      'plan', t.plan, 'plan_limit', public.plan_limit(t.plan), 'shared', public.team_shared(t),
       'current_period_end', t.current_period_end, 'cancel_at_period_end', t.cancel_at_period_end,
       'has_billing', t.stripe_customer_id is not null),
     'access', public.has_access(uid),
@@ -288,19 +357,41 @@ begin
     raise exception '% is already in your team.', invite_email;
   end if;
   select * into t from public.teams where id = tid;
-  if public.team_paid(t) then
-    select (select count(*) from public.team_members where team_id = tid)
-         + (select count(*) from public.invites where team_id = tid and accepted_at is null and expires_at > now())
-      into used;
-    if used >= t.seats then
-      raise exception 'All % paid seats are in use. The owner can add a seat under Billing.', t.seats;
-    end if;
+  select (select count(*) from public.team_members where team_id = tid)
+       + (select count(*) from public.invites where team_id = tid and accepted_at is null and expires_at > now())
+    into used;
+  if public.plan_limit(t.plan) is not null and used >= public.plan_limit(t.plan) then
+    raise exception 'Your plan covers up to % people.%', public.plan_limit(t.plan),
+      case when t.plan = 'agency_10' then ' The owner can switch to Agency 20 under Billing.' else ' Contact support for larger agencies.' end;
+  elsif t.plan = 'per_user' and public.team_paid(t) and used >= t.seats then
+    raise exception 'All % paid seats are in use. The owner can add a seat under Billing.', t.seats;
+  elsif not public.team_paid(t) and used >= 20 then
+    raise exception 'During the free trial a team can have up to 20 people.';
   end if;
   delete from public.invites where team_id = tid and lower(email) = lower(invite_email) and accepted_at is null;
   insert into public.invites (team_id, email, role, invited_by)
     values (tid, lower(trim(invite_email)), invite_role, auth.uid())
     returning * into inv;
   return jsonb_build_object('id', inv.id, 'token', inv.token, 'email', inv.email, 'role', inv.role, 'expires_at', inv.expires_at);
+end $$;
+
+-- during the free trial the owner picks which plan to try (e.g. the shared contact list);
+-- once paying, plans change through Stripe (change-plan function)
+create function public.set_trial_plan(new_plan text) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  t public.teams;
+  n int;
+begin
+  if public.my_role() <> 'owner' then raise exception 'Only the team owner can choose the plan.'; end if;
+  if new_plan not in ('per_user', 'agency_10', 'agency_20') then raise exception 'Unknown plan.'; end if;
+  select * into t from public.teams where id = public.my_team_id();
+  if public.team_paid(t) then raise exception 'Your team is subscribed. Use Change plan under Billing.'; end if;
+  select count(*) into n from public.team_members where team_id = t.id;
+  if public.plan_limit(new_plan) is not null and n > public.plan_limit(new_plan) then
+    raise exception 'Your team has % people; that plan covers up to %.', n, public.plan_limit(new_plan);
+  end if;
+  update public.teams set plan = new_plan where id = t.id;
 end $$;
 
 create function public.revoke_invite(invite_id uuid) returns void
@@ -362,10 +453,39 @@ end $$;
 -- team dashboard: each member with their latest figures
 create function public.team_dashboard() returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare tid uuid := public.my_team_id();
+declare
+  tid uuid := public.my_team_id();
+  t public.teams;
+  shared jsonb := null;
+  week_ms bigint := (extract(epoch from now() - interval '7 days') * 1000)::bigint;
 begin
   if public.my_role() not in ('owner', 'admin') then raise exception 'Only owners and admins can see the team dashboard.'; end if;
+  select * into t from public.teams where id = tid;
+  if public.team_shared(t) then
+    -- figures from the shared list: whole-agency pipeline, and what each person added and did this week
+    shared := jsonb_build_object(
+      'total', (select count(*) from public.team_contacts where team_id = tid and coalesce(record ->> 'stage', '') <> 'removed'),
+      'stages', (select coalesce(jsonb_object_agg(stage, n), '{}'::jsonb) from (
+                   select record ->> 'stage' as stage, count(*) as n from public.team_contacts
+                   where team_id = tid and record ->> 'stage' is not null group by 1) x),
+      'by_member', (select coalesce(jsonb_object_agg(m.user_id::text, jsonb_build_object(
+                      'added', (select count(*) from public.team_contacts c where c.team_id = tid and c.created_by = m.user_id),
+                      'calls7', coalesce(a.calls7, 0), 'sms7', coalesce(a.sms7, 0), 'emails7', coalesce(a.emails7, 0),
+                      'touches7', coalesce(a.touches7, 0), 'contacted7', coalesce(a.contacted7, 0))), '{}'::jsonb)
+                    from public.team_members m
+                    left join (
+                      select e ->> 'by' as uid,
+                             count(*) filter (where e ->> 'type' ~* 'call') as calls7,
+                             count(*) filter (where e ->> 'type' !~* 'call' and e ->> 'type' ~* 'sms|text') as sms7,
+                             count(*) filter (where e ->> 'type' !~* 'call|sms|text' and e ->> 'type' ~* 'email') as emails7,
+                             count(*) as touches7, count(distinct c.ckey) as contacted7
+                      from public.team_contacts c, jsonb_array_elements(c.activity) e
+                      where c.team_id = tid and e ->> 'ts' ~ '^[0-9]{1,15}$' and (e ->> 'ts')::bigint >= week_ms
+                      group by 1) a on a.uid = m.user_id::text
+                    where m.team_id = tid));
+  end if;
   return jsonb_build_object(
+    'shared', shared,
     'members', coalesce((
       select jsonb_agg(jsonb_build_object(
                'user_id', m.user_id, 'email', p.email, 'full_name', p.full_name, 'role', m.role,
@@ -385,10 +505,37 @@ end $$;
 -- only signed-in people can call anything; the Stripe functions use the service role
 revoke execute on all functions in schema public from public, anon;
 grant execute on function public.has_access(uuid), public.my_team_id(), public.my_role(),
-  public.team_paid(public.teams) to authenticated, service_role;
+  public.team_paid(public.teams), public.plan_limit(text), public.team_shared(public.teams),
+  public.in_shared_team(uuid) to authenticated, service_role;
+grant execute on function public.set_trial_plan(text) to authenticated;
 grant execute on function public.app_context(text), public.rename_team(text), public.create_invite(text, text),
   public.revoke_invite(uuid), public.set_member_role(uuid, text), public.transfer_ownership(uuid),
   public.remove_member(uuid), public.leave_team(), public.team_dashboard() to authenticated;
+
+-- ── deleting data after an account ends (the privacy policy promises this) ──
+-- Removes the CRM data of teams that have had no trial or subscription for
+-- more than `days` days. Accounts themselves stay, so people can sign in and
+-- subscribe again (with an empty CRM). Run it daily, e.g. with pg_cron:
+--   select cron.schedule('purge-expired-crm-data', '30 3 * * *', 'select public.purge_expired_data(90)');
+create function public.purge_expired_data(days int default 90) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  cutoff timestamptz := now() - make_interval(days => days);
+  teams_done int; people int; contacts int;
+begin
+  create temp table expired on commit drop as
+    select t.id from public.teams t
+    where not public.team_paid(t)
+      and greatest(t.trial_ends_at, coalesce(t.current_period_end, t.trial_ends_at)) < cutoff;
+  select count(*) into teams_done from expired;
+  delete from public.team_contacts where team_id in (select id from expired);
+  get diagnostics contacts = row_count;
+  delete from public.crm_state where user_id in (select user_id from public.team_members where team_id in (select id from expired));
+  get diagnostics people = row_count;
+  delete from public.member_stats where user_id in (select user_id from public.team_members where team_id in (select id from expired));
+  return jsonb_build_object('teams', teams_done, 'crm_rows', people, 'shared_contacts', contacts);
+end $$;
+revoke execute on function public.purge_expired_data(int) from public, anon, authenticated;
 
 -- ── the app itself lives in a private bucket ────────────────────────
 insert into storage.buckets (id, name, public) values ('app', 'app', false)

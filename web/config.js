@@ -5,10 +5,21 @@ window.CRM_CONFIG = {
   // Supabase → Project Settings → API
   supabaseUrl: 'https://YOUR-PROJECT.supabase.co',
   supabaseAnonKey: 'YOUR-ANON-KEY',
-  priceLabel: '$100 AUD per user per month',
+  // shown on sign-up and when a trial ends; the plans themselves are listed in app.js (PLANS)
+  priceLabel: 'from $100 AUD per agent per month',
   trialDays: 14,
   supportEmail: 'support@example.com',
-  // links shown on the sign-up page (add these pages before launch)
-  termsUrl: '',
-  privacyUrl: ''
+  // the terms of service and privacy policy (web/terms.html, web/privacy.html) fill in these details
+  termsUrl: 'terms.html',
+  privacyUrl: 'privacy.html',
+  legal: {
+    businessName: '[Your business name]',
+    abn: '[ABN]',
+    address: '[Business address]',
+    email: 'privacy@example.com',            // for privacy requests and complaints
+    state: 'Western Australia',              // whose laws and courts apply
+    gst: 'include GST',                      // or 'are plus GST'. Check with your accountant.
+    effectiveDate: '[start date]',
+    retentionDays: 90                        // how long data is kept after an account closes, before deletion
+  }
 };
