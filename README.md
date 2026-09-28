@@ -1,5 +1,9 @@
 # Real Estate CRM
 
+**Online version with subscriptions:** see [DEPLOY.md](DEPLOY.md). It covers login, a 14-day free trial, $100 AUD per user per month through Stripe, cloud sync between phone and computer, agency teams with roles and a team dashboard, in-app support, and installing it on a phone.
+
+The rest of this page is about the single-file version.
+
 A real estate prospecting CRM that runs as one web page in the browser, with nothing to install. It covers a funnel board of contacts by suburb and street, the diary, calendar, call list, SMS and email templates, buyers, investors, expenses, logbook and BAS tracking.
 
 ## Using it

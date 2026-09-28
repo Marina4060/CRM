@@ -1,0 +1,399 @@
+-- Real Estate CRM: accounts, teams and roles, 14-day trial, per-seat Stripe
+-- subscription, cloud copy of each agent's CRM, team dashboard figures and
+-- support requests.
+--
+-- Everyone belongs to exactly one team. A solo agent is a team of one.
+-- Roles: owner (billing, seats, roles), admin (invites agents, sees the team
+-- dashboard) and agent (their own CRM only).
+
+-- ── people ──────────────────────────────────────────────────────────
+create table public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  email text not null,
+  full_name text,
+  created_at timestamptz not null default now(),
+  -- the free trial belongs to the person, so leaving and re-joining teams never restarts it
+  trial_ends_at timestamptz not null default (now() + interval '14 days')
+);
+
+-- ── teams (the thing that pays) ─────────────────────────────────────
+create table public.teams (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  created_at timestamptz not null default now(),
+  trial_ends_at timestamptz not null,
+  stripe_customer_id text unique,
+  stripe_subscription_id text,
+  subscription_status text,          -- Stripe: trialing, active, past_due, canceled, ...
+  seats int not null default 0,      -- paid seats (subscription quantity)
+  current_period_end timestamptz,
+  cancel_at_period_end boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+create table public.team_members (
+  team_id uuid not null references public.teams (id) on delete cascade,
+  user_id uuid not null unique references auth.users (id) on delete cascade,  -- one team each
+  role text not null check (role in ('owner', 'admin', 'agent')),
+  joined_at timestamptz not null default now(),
+  primary key (team_id, user_id)
+);
+create unique index one_owner_per_team on public.team_members (team_id) where role = 'owner';
+
+create table public.invites (
+  id uuid primary key default gen_random_uuid(),
+  team_id uuid not null references public.teams (id) on delete cascade,
+  email text not null,
+  role text not null check (role in ('admin', 'agent')),
+  token text not null unique default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
+  invited_by uuid references auth.users (id) on delete set null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '14 days'),
+  accepted_at timestamptz
+);
+create unique index one_open_invite_per_email on public.invites (team_id, lower(email)) where accepted_at is null;
+
+-- ── each agent's CRM data: one row per browser-storage key ──────────
+create table public.crm_state (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  key text not null check (key ~ '^crm_[a-z0-9_-]+$'),
+  value text not null check (length(value) <= 8000000),   -- a browser holds about 5 MB per site
+  updated_at timestamptz not null default now(),
+  primary key (user_id, key)
+);
+
+-- ── figures for the team dashboard (no client details) ──────────────
+create table public.member_stats (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  stats jsonb not null check (pg_column_size(stats) < 8192),
+  updated_at timestamptz not null default now()
+);
+
+-- ── help requests from inside the app ───────────────────────────────
+create table public.support_requests (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users (id) on delete set null,
+  email text not null,
+  topic text not null check (topic in ('question', 'problem', 'billing', 'idea')),
+  message text not null check (length(message) between 1 and 5000),
+  page text,
+  app_version text,
+  created_at timestamptz not null default now(),
+  status text not null default 'open' check (status in ('open', 'answered', 'closed'))
+);
+
+-- ── helpers ─────────────────────────────────────────────────────────
+create function public.touch_updated_at() returns trigger
+language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end $$;
+create trigger teams_touch before update on public.teams for each row execute function public.touch_updated_at();
+create trigger crm_state_touch before update on public.crm_state for each row execute function public.touch_updated_at();
+create trigger member_stats_touch before update on public.member_stats for each row execute function public.touch_updated_at();
+
+create function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email, full_name)
+    values (new.id, new.email, nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''));
+  return new;
+end $$;
+create trigger on_auth_user_created after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+create function public.my_team_id() returns uuid
+language sql stable security definer set search_path = public as $$
+  select team_id from public.team_members where user_id = auth.uid();
+$$;
+
+-- 'none' when signed out or not in a team, so permission checks fail closed
+create function public.my_role() returns text
+language sql stable security definer set search_path = public as $$
+  select coalesce((select role from public.team_members where user_id = auth.uid()), 'none');
+$$;
+
+create function public.team_paid(t public.teams) returns boolean
+language sql immutable as $$
+  select t.subscription_status in ('active', 'trialing', 'past_due');
+$$;
+
+-- may this person use the app right now?
+--   * their team is paying and they are within the paid seats, or
+--   * their team is still in its free trial
+create function public.has_access(uid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+    from public.team_members m
+    join public.teams t on t.id = m.team_id
+    where m.user_id = uid
+      and (t.trial_ends_at > now()
+           or (public.team_paid(t)
+               and (select count(*) from public.team_members m2 where m2.team_id = t.id) <= greatest(t.seats, 1)))
+  );
+$$;
+
+-- ── row security ────────────────────────────────────────────────────
+alter table public.profiles enable row level security;
+alter table public.teams enable row level security;
+alter table public.team_members enable row level security;
+alter table public.invites enable row level security;
+alter table public.crm_state enable row level security;
+alter table public.member_stats enable row level security;
+alter table public.support_requests enable row level security;
+
+-- everything that changes teams, roles, billing or invites goes through the
+-- functions below or the Stripe webhook, never through direct writes
+create policy "read own profile" on public.profiles for select to authenticated
+  using (id = auth.uid() or id in (select user_id from public.team_members where team_id = public.my_team_id()));
+create policy "update own name" on public.profiles for update to authenticated
+  using (id = auth.uid()) with check (id = auth.uid());
+revoke update on public.profiles from authenticated;
+grant update (full_name) on public.profiles to authenticated;
+
+create policy "read own team" on public.teams for select to authenticated
+  using (id = public.my_team_id());
+create policy "read team members" on public.team_members for select to authenticated
+  using (team_id = public.my_team_id());
+create policy "owners and admins see invites" on public.invites for select to authenticated
+  using (team_id = public.my_team_id() and public.my_role() in ('owner', 'admin'));
+
+-- own data: always readable (so it can be exported after a subscription ends);
+-- saving changes needs access
+create policy "read own data" on public.crm_state for select to authenticated
+  using (user_id = auth.uid());
+create policy "add own data" on public.crm_state for insert to authenticated
+  with check (user_id = auth.uid() and public.has_access(auth.uid()));
+create policy "change own data" on public.crm_state for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid() and public.has_access(auth.uid()));
+create policy "delete own data" on public.crm_state for delete to authenticated
+  using (user_id = auth.uid() and public.has_access(auth.uid()));
+
+-- dashboard figures: you write your own; owners and admins read the team's
+create policy "read stats" on public.member_stats for select to authenticated
+  using (user_id = auth.uid()
+         or (public.my_role() in ('owner', 'admin')
+             and user_id in (select user_id from public.team_members where team_id = public.my_team_id())));
+create policy "write own stats" on public.member_stats for insert to authenticated
+  with check (user_id = auth.uid());
+create policy "update own stats" on public.member_stats for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "send support request" on public.support_requests for insert to authenticated
+  with check (user_id = auth.uid());
+create policy "read own support requests" on public.support_requests for select to authenticated
+  using (user_id = auth.uid());
+
+-- ── actions (called from the app) ───────────────────────────────────
+
+-- make sure the signed-in person is in a team; returns everything the app
+-- needs to know about them. An invite token joins that team.
+create function public.app_context(invite_token text default null) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  uid uuid := auth.uid();
+  p public.profiles;
+  inv public.invites;
+  cur public.team_members;
+  t public.teams;
+  n int;
+begin
+  if uid is null then raise exception 'not signed in'; end if;
+  select * into p from public.profiles where id = uid;
+  if not found then
+    insert into public.profiles (id, email)
+      select id, email from auth.users where id = uid
+      returning * into p;
+  end if;
+  select * into cur from public.team_members where user_id = uid;
+
+  -- an invite: by link, or waiting for this email address
+  if invite_token is not null then
+    select * into inv from public.invites
+      where token = invite_token and accepted_at is null and expires_at > now();
+    if not found then raise exception 'This invite link has expired or was already used.'; end if;
+    if lower(inv.email) <> lower(p.email) then
+      raise exception 'This invite was sent to %. Sign in with that email address to accept it.', inv.email;
+    end if;
+  elsif cur.user_id is null then
+    select * into inv from public.invites
+      where lower(email) = lower(p.email) and accepted_at is null and expires_at > now()
+      order by created_at desc limit 1;
+  end if;
+
+  if inv.id is not null and (cur.user_id is null or cur.team_id <> inv.team_id) then
+    if cur.user_id is not null then
+      -- leaving a team of one: fine unless it is paying
+      select * into t from public.teams where id = cur.team_id;
+      select count(*) into n from public.team_members where team_id = cur.team_id;
+      if cur.role = 'owner' and n > 1 then
+        raise exception 'You own a team with other members. Hand it over or remove them before joining another team.';
+      end if;
+      if cur.role = 'owner' and public.team_paid(t) then
+        raise exception 'Your own subscription is still active. Cancel it under Billing before joining another team.';
+      end if;
+      delete from public.team_members where user_id = uid;
+      if n = 1 then delete from public.teams where id = cur.team_id; end if;
+    end if;
+    insert into public.team_members (team_id, user_id, role) values (inv.team_id, uid, inv.role);
+    update public.invites set accepted_at = now() where id = inv.id;
+  elsif cur.user_id is null then
+    -- a new solo team, on this person's own trial
+    insert into public.teams (name, trial_ends_at)
+      values (coalesce(nullif(p.full_name, ''), split_part(p.email, '@', 1)) || '''s team', p.trial_ends_at)
+      returning * into t;
+    insert into public.team_members (team_id, user_id, role) values (t.id, uid, 'owner');
+  end if;
+
+  select * into cur from public.team_members where user_id = uid;
+  select * into t from public.teams where id = cur.team_id;
+  select count(*) into n from public.team_members where team_id = t.id;
+  return jsonb_build_object(
+    'user', jsonb_build_object('id', uid, 'email', p.email, 'full_name', p.full_name),
+    'role', cur.role,
+    'team', jsonb_build_object(
+      'id', t.id, 'name', t.name, 'trial_ends_at', t.trial_ends_at,
+      'subscription_status', t.subscription_status, 'seats', t.seats, 'members', n,
+      'current_period_end', t.current_period_end, 'cancel_at_period_end', t.cancel_at_period_end,
+      'has_billing', t.stripe_customer_id is not null),
+    'access', public.has_access(uid),
+    'now', now());
+end $$;
+
+create function public.rename_team(new_name text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_role() <> 'owner' then raise exception 'Only the team owner can rename the team.'; end if;
+  if length(trim(new_name)) not between 1 and 80 then raise exception 'Please enter a team name.'; end if;
+  update public.teams set name = trim(new_name) where id = public.my_team_id();
+end $$;
+
+create function public.create_invite(invite_email text, invite_role text default 'agent') returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  me text := public.my_role();
+  tid uuid := public.my_team_id();
+  t public.teams;
+  used int;
+  inv public.invites;
+begin
+  if me not in ('owner', 'admin') then raise exception 'Only owners and admins can invite people.'; end if;
+  if invite_role not in ('admin', 'agent') then raise exception 'Unknown role.'; end if;
+  if invite_role = 'admin' and me <> 'owner' then raise exception 'Only the owner can invite admins.'; end if;
+  if invite_email !~* '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'Please enter a valid email address.'; end if;
+  if exists (select 1 from public.team_members m join public.profiles p on p.id = m.user_id
+             where m.team_id = tid and lower(p.email) = lower(invite_email)) then
+    raise exception '% is already in your team.', invite_email;
+  end if;
+  select * into t from public.teams where id = tid;
+  if public.team_paid(t) then
+    select (select count(*) from public.team_members where team_id = tid)
+         + (select count(*) from public.invites where team_id = tid and accepted_at is null and expires_at > now())
+      into used;
+    if used >= t.seats then
+      raise exception 'All % paid seats are in use. The owner can add a seat under Billing.', t.seats;
+    end if;
+  end if;
+  delete from public.invites where team_id = tid and lower(email) = lower(invite_email) and accepted_at is null;
+  insert into public.invites (team_id, email, role, invited_by)
+    values (tid, lower(trim(invite_email)), invite_role, auth.uid())
+    returning * into inv;
+  return jsonb_build_object('id', inv.id, 'token', inv.token, 'email', inv.email, 'role', inv.role, 'expires_at', inv.expires_at);
+end $$;
+
+create function public.revoke_invite(invite_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_role() not in ('owner', 'admin') then raise exception 'Only owners and admins can cancel invites.'; end if;
+  delete from public.invites where id = invite_id and team_id = public.my_team_id() and accepted_at is null;
+end $$;
+
+create function public.set_member_role(member uuid, new_role text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_role() <> 'owner' then raise exception 'Only the team owner can change roles.'; end if;
+  if new_role not in ('admin', 'agent') then raise exception 'Unknown role.'; end if;
+  if member = auth.uid() then raise exception 'You are the owner. Use "Make owner" on someone else to hand over.'; end if;
+  update public.team_members set role = new_role where user_id = member and team_id = public.my_team_id();
+  if not found then raise exception 'That person is not in your team.'; end if;
+end $$;
+
+-- hand the team (and its billing) to another member
+create function public.transfer_ownership(member uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare tid uuid := public.my_team_id();
+begin
+  if public.my_role() <> 'owner' then raise exception 'Only the team owner can do this.'; end if;
+  if not exists (select 1 from public.team_members where user_id = member and team_id = tid) then
+    raise exception 'That person is not in your team.';
+  end if;
+  update public.team_members set role = 'admin' where user_id = auth.uid();
+  update public.team_members set role = 'owner' where user_id = member and team_id = tid;
+end $$;
+
+-- remove someone; their CRM data stays with their own account
+create function public.remove_member(member uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  me text := public.my_role();
+  them text;
+begin
+  select role into them from public.team_members where user_id = member and team_id = public.my_team_id();
+  if them is null then raise exception 'That person is not in your team.'; end if;
+  if member = auth.uid() then raise exception 'Use "Leave team" to remove yourself.'; end if;
+  if them = 'owner' then raise exception 'The owner cannot be removed.'; end if;
+  if me = 'admin' and them <> 'agent' then raise exception 'Admins can only remove agents.'; end if;
+  if me not in ('owner', 'admin') then raise exception 'Only owners and admins can remove people.'; end if;
+  delete from public.team_members where user_id = member;
+end $$;
+
+create function public.leave_team() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if public.my_role() = 'owner' then
+    raise exception 'The owner cannot leave. Make someone else owner first.';
+  end if;
+  delete from public.team_members where user_id = auth.uid();
+  -- next sign-in puts them in a new team of their own (their trial does not restart)
+end $$;
+
+-- team dashboard: each member with their latest figures
+create function public.team_dashboard() returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare tid uuid := public.my_team_id();
+begin
+  if public.my_role() not in ('owner', 'admin') then raise exception 'Only owners and admins can see the team dashboard.'; end if;
+  return jsonb_build_object(
+    'members', coalesce((
+      select jsonb_agg(jsonb_build_object(
+               'user_id', m.user_id, 'email', p.email, 'full_name', p.full_name, 'role', m.role,
+               'joined_at', m.joined_at, 'stats', s.stats, 'stats_updated_at', s.updated_at)
+             order by m.role = 'owner' desc, m.joined_at)
+      from public.team_members m
+      join public.profiles p on p.id = m.user_id
+      left join public.member_stats s on s.user_id = m.user_id
+      where m.team_id = tid), '[]'::jsonb),
+    'invites', coalesce((
+      select jsonb_agg(jsonb_build_object('id', i.id, 'email', i.email, 'role', i.role,
+               'token', i.token, 'expires_at', i.expires_at) order by i.created_at)
+      from public.invites i
+      where i.team_id = tid and i.accepted_at is null and i.expires_at > now()), '[]'::jsonb));
+end $$;
+
+-- only signed-in people can call anything; the Stripe functions use the service role
+revoke execute on all functions in schema public from public, anon;
+grant execute on function public.has_access(uuid), public.my_team_id(), public.my_role(),
+  public.team_paid(public.teams) to authenticated, service_role;
+grant execute on function public.app_context(text), public.rename_team(text), public.create_invite(text, text),
+  public.revoke_invite(uuid), public.set_member_role(uuid, text), public.transfer_ownership(uuid),
+  public.remove_member(uuid), public.leave_team(), public.team_dashboard() to authenticated;
+
+-- ── the app itself lives in a private bucket ────────────────────────
+insert into storage.buckets (id, name, public) values ('app', 'app', false)
+  on conflict (id) do nothing;
+
+create policy "members with access download the app" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'app' and public.has_access(auth.uid()));

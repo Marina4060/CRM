@@ -304,6 +304,9 @@ def rewrite_call_list(html):
     src = re.sub(r'\bMonarch Real Estate\b', '{my agency}', src)
     src = re.sub(r'\bMarina Dacheva\b', '{my name}', src)
     src = src.replace("(Marina's templates)", '(my templates)')
+    # keep the call list's own save with the CRM's other crm_ keys (so it backs up and syncs)
+    must(src.count("'debie-call-list-v1'") == 1, 'call list storage key not found')
+    src = src.replace("'debie-call-list-v1'", "'crm_call_list_v1'")
     src = src.replace("(activeProfile().name || 'Debie')", "(activeProfile().name || MARINA.name || 'Me')")
     for a, b in COMMENT_WORDS:
         src = re.sub(r'(//[^\n]*?)\b%s\b' % re.escape(a), lambda mm: mm.group(1) + b, src)
