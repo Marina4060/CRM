@@ -1,0 +1,4 @@
+.orig.html
+*.orig.html
+MARINA_CRM_*.html
+__pycache__/
