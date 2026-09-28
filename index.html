@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CRM Boards</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <span class="brand-mark">▦</span>
+        <span>CRM Boards</span>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-heading">
+          <span>Boards</span>
+          <button class="icon-btn" id="addBoardBtn" title="Add board">＋</button>
+        </div>
+        <nav id="boardList" class="board-list"></nav>
+      </div>
+      <div class="sidebar-footer">
+        <button class="link-btn" id="exportJsonBtn">Back up data (JSON)</button>
+        <label class="link-btn">
+          Restore backup
+          <input type="file" id="importJsonInput" accept="application/json" hidden>
+        </label>
+        <button class="link-btn danger" id="resetBtn">Reset to sample data</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="board-header">
+        <button class="icon-btn menu-btn" id="menuBtn" title="Boards">☰</button>
+        <h1 id="boardTitle" class="board-title" contenteditable="true" spellcheck="false"></h1>
+        <div class="board-actions">
+          <button class="btn subtle" id="deleteBoardBtn" title="Delete board">Delete board</button>
+        </div>
+      </header>
+
+      <div class="toolbar">
+        <div class="view-tabs" role="tablist">
+          <button class="tab active" data-view="table" role="tab">Table</button>
+          <button class="tab" data-view="kanban" role="tab">Kanban</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="btn primary" id="newItemBtn">New item</button>
+          <input type="search" id="searchInput" class="search" placeholder="Search">
+          <select id="personFilter" class="select" title="Filter by person"></select>
+          <button class="btn subtle" id="addGroupBtn">Add group</button>
+          <button class="btn subtle" id="addColumnBtn">Add column</button>
+          <button class="btn subtle" id="exportCsvBtn">Export CSV</button>
+        </div>
+      </div>
+
+      <section id="boardView" class="board-view"></section>
+    </main>
+  </div>
+
+  <aside class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer-header">
+      <input id="drawerTitle" class="drawer-title">
+      <button class="icon-btn" id="closeDrawerBtn" title="Close">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div id="drawerFields" class="drawer-fields"></div>
+      <h3 class="drawer-subheading">Updates</h3>
+      <form id="updateForm" class="update-form">
+        <textarea id="updateText" rows="3" placeholder="Write an update (call notes, next steps…)"></textarea>
+        <button class="btn primary" type="submit">Post update</button>
+      </form>
+      <ul id="updateList" class="update-list"></ul>
+      <button class="btn danger-outline" id="deleteItemBtn">Delete item</button>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+
+  <div class="popover" id="popover"></div>
+
+  <dialog id="columnDialog" class="dialog">
+    <form method="dialog" id="columnForm">
+      <h2>Add column</h2>
+      <label>Title <input name="title" required></label>
+      <label>Type
+        <select name="type">
+          <option value="text">Text</option>
+          <option value="status">Status</option>
+          <option value="person">Person</option>
+          <option value="date">Date</option>
+          <option value="number">Number</option>
+          <option value="phone">Phone</option>
+          <option value="email">Email</option>
+        </select>
+      </label>
+      <label class="status-options-field">Status labels (comma separated)
+        <input name="options" placeholder="To do, Working on it, Done">
+      </label>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn subtle" formnovalidate>Cancel</button>
+        <button value="ok" class="btn primary">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
