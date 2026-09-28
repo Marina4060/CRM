@@ -50,7 +50,11 @@ expect "invite for someone else's email is refused" "Sign in with that email" "$
 expect "invited person joins as agent" '"role": "agent"' "$B" "select public.app_context('$TOK')"
 expect "used invite can't be reused" "expired or was already used" "$D" "select public.app_context('$TOK')"
 as "$A" "select public.create_invite('admin@test.au', 'admin')" >/dev/null
-expect "invite waiting for an email is picked up at sign-in" '"role": "admin"' "$C" "select public.app_context()"
+expect "invite waiting for an email is not accepted silently" '"role": "owner"' "$C" "select public.app_context()"
+expect "…it is offered, with the team's name" "'s team" "$C" "select public.app_context()->'pending_invite'->>'team_name'"
+CTOK=$(as "$C" "select public.app_context()->'pending_invite'->>'token'" | tail -1)
+expect "joining by the offered invite" '"role": "admin"' "$C" "select public.app_context('$CTOK')"
+expect "after joining, nothing is offered" "t" "$C" "select public.app_context()->'pending_invite' = 'null'::jsonb"
 expect "agent can't invite" "Only owners and admins" "$B" "select public.create_invite('x@test.au', 'agent')"
 expect "admin can't invite admins" "Only the owner can invite admins" "$C" "select public.create_invite('x@test.au', 'admin')"
 expect "admin can invite agents" "x@test.au" "$C" "select public.create_invite('x@test.au', 'agent')->>'email'"
@@ -118,6 +122,10 @@ GTEAM=$(as "$G" "select public.my_team_id()" | tail -1)
 expect "outsider can't add to the agency's list" "row-level security" "$G" "insert into public.team_contacts (team_id, ckey, record) values ('$ETEAM', 'x|y', '{}')"
 TS=$(( $(date +%s) * 1000 ))
 expect "agent logs a call on the shared contact" "" "$F" "update public.team_contacts set activity = '[{\"type\": \"📞 Called\", \"ts\": $TS, \"by\": \"$F\"}]' where ckey = 'sam|4 ocean st'"
+expect "a call logged in a teammate's name is credited to whoever logged it" "$F" "$F" "update public.team_contacts set activity = activity || '[{\"type\": \"📞 Called\", \"ts\": 1, \"by\": \"$E\"}]' where ckey = 'sam|4 ocean st' returning activity->1->>'by'"
+expect "…while earlier entries keep their author" "$F" "$E" "update public.team_contacts set record = record where ckey = 'sam|4 ocean st' returning activity->0->>'by'"
+expect "a new contact's calls are credited to whoever added it" "$F" "$F" "insert into public.team_contacts (team_id, ckey, record, activity) values ('$ETEAM', 'new|2 rd', '{}', '[{\"type\": \"x\", \"by\": \"$E\"}]') returning activity->0->>'by'"
+"${Q[@]}" -c "delete from public.team_contacts where ckey = 'new|2 rd'; update public.team_contacts set activity = activity - 1 where ckey = 'sam|4 ocean st'"
 expect "dashboard counts the agent's calls from the shared list" '"calls7": 1' "$E" "select public.team_dashboard()->'shared'->'by_member'->'$F'"
 expect "dashboard shows the agency pipeline" '"warm": 1' "$E" "select public.team_dashboard()->'shared'->'stages'"
 for i in $(seq 1 8); do as "$E" "select public.create_invite('extra$i@test.au', 'agent')" >/dev/null; done
@@ -136,6 +144,17 @@ expect "rows are still there" "1" "-" "reset role; select count(*) from public.t
 for i in $(seq 1 20); do as "$G" "select public.create_invite('trialcap$i@test.au', 'agent')" >/dev/null; done
 expect "a trial team stops at 20 people" "up to 20 people" "$G" "select public.create_invite('trialcap21@test.au', 'agent')"
 
+echo "joining needs room in the team"
+J=$(user j-owner@test.au); K=$(user k-agent@test.au)
+as "$J" "select public.app_context()" >/dev/null
+JTEAM=$(as "$J" "select public.my_team_id()" | tail -1)
+KTOK=$(as "$J" "select public.create_invite('k-agent@test.au', 'agent')->>'token'" | tail -1)
+"${Q[@]}" -c "update public.teams set subscription_status = 'active', seats = 1 where id = '$JTEAM'"
+expect "invite from the trial can't overfill the paid seats" "no free paid seat" "$K" "select public.app_context('$KTOK')"
+expect "…and the owner keeps access" "t" "$J" "select public.has_access('$J')"
+"${Q[@]}" -c "update public.teams set seats = 2 where id = '$JTEAM'"
+expect "with a seat added the invite works" '"role": "agent"' "$K" "select public.app_context('$KTOK')"
+
 echo "deleting data after an account ends"
 expect "people can't run the clean-up themselves" "permission denied" "$A" "select public.purge_expired_data(0)"
 "${Q[@]}" -c "update public.teams set subscription_status = null, current_period_end = null, trial_ends_at = now() - interval '91 days' where id = '$ETEAM'"
@@ -145,6 +164,12 @@ AFTER=$("${Q[@]}" -c "select count(*) from public.team_contacts where team_id = 
 [ "$BEFORE" = 1 ] && [ "$AFTER" = 0 ] && ok "data of a team lapsed over 90 days is deleted" || bad "data of a team lapsed over 90 days is deleted" "before=$BEFORE after=$AFTER $OUT"
 LEFT=$("${Q[@]}" -c "select count(*) from public.crm_state where user_id = '$B'")
 [ "$LEFT" -ge 1 ] && ok "data of teams still in their 90 days is kept" || bad "data of teams still in their 90 days is kept" "rows=$LEFT"
+H=$(user h-gone@test.au); I=$(user i-recent@test.au)
+"${Q[@]}" -c "update public.profiles set trial_ends_at = now() - interval '200 days' where id in ('$H', '$I');
+  insert into public.crm_state (user_id, key, value, updated_at) values ('$H', 'crm_data_v4', '[1]', now() - interval '120 days'), ('$I', 'crm_data_v4', '[2]', now() - interval '5 days')"
+"${Q[@]}" -c "select public.purge_expired_data(90)" >/dev/null
+[ "$("${Q[@]}" -c "select count(*) from public.crm_state where user_id = '$H'")" = 0 ] && ok "someone in no team, untouched for 90 days: deleted" || bad "someone in no team, untouched for 90 days: deleted" "still there"
+[ "$("${Q[@]}" -c "select count(*) from public.crm_state where user_id = '$I'")" = 1 ] && ok "someone in no team who changed data recently: kept" || bad "someone in no team who changed data recently: kept" "gone"
 
 echo "app download"
 "${Q[@]}" -c "insert into storage.objects (bucket_id, name) values ('app', 'crm.html')"

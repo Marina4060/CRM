@@ -141,3 +141,4 @@ table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
 .legal th, .legal td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e4df; vertical-align: top; }
 .legal .back { display: inline-block; margin-top: 18px; }
 .legal .card p { margin: 0; }
+.invite-offer { background: var(--blue-soft); border-radius: 10px; padding: 10px 12px; margin: 0; }

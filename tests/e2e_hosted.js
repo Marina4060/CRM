@@ -159,6 +159,38 @@ const serverState = async (email, key) => (await db.query(
   check('sign-out returns to sign-in', !!(await until(() => A2.isVisible('#f-signin'))));
   check('sign-out removes CRM data from the device', (await A2.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('crm_')).length)) === 0);
 
+  console.log('the CRM frame only writes for the account it was opened for');
+  const gf = await crmFrame(B);
+  const owner0 = await B.evaluate(() => localStorage.getItem('shell_owner'));
+  await gf.evaluate(() => localStorage.setItem('crm_guard_test', 'mine'));
+  check('frame writes while its account is signed in', (await B.evaluate(() => localStorage.getItem('crm_guard_test'))) === 'mine');
+  await B.evaluate(() => localStorage.setItem('shell_owner', JSON.stringify('someone-else')));
+  await gf.evaluate(() => { localStorage.setItem('crm_guard_test', 'stale'); localStorage.removeItem('crm_data_v4'); }).catch(() => {});
+  const leftAlone = await B.evaluate(() => [localStorage.getItem('crm_guard_test'), localStorage.getItem('crm_data_v4') !== null]);
+  await B.evaluate((o) => { localStorage.setItem('shell_owner', o); localStorage.removeItem('crm_guard_test'); }, owner0);
+  check("frame can't write once the device belongs to someone else", leftAlone[0] === 'mine' && leftAlone[1], JSON.stringify(leftAlone));
+  await B.reload(); await crmFrame(B);
+
+  console.log('email links');
+  const mal = await (await fetch(BASE + '/auth/v1/signup', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: 'x' },
+    body: JSON.stringify({ email: 'mallory@else.test', password: 'password123', data: { full_name: 'Mallory' } }) })).json();
+  let nth = 0;
+  const link = (type) => BASE + '/?n=' + (++nth) + '#access_token=' + mal.access_token + '&refresh_token=' + mal.refresh_token + '&expires_in=3600&type=' + type;
+  const V = await newUser(browser, { label: 'visitor' });
+  await V.goto(link('signup'));
+  check("a link from someone else's sign-up does not sign this browser in", !!(await until(() => V.isVisible('#f-signin'))) && !(await V.evaluate(() => localStorage.getItem('shell_session'))));
+  check('…it just says the email is confirmed', /confirmed/.test(await V.textContent('#toast')));
+  await V.goto(BASE + '/'); await V.goto(link('recovery'));
+  check('a reset link from another browser asks for a new link instead', !!(await until(() => V.isVisible('#f-forgot'))) && !(await V.evaluate(() => localStorage.getItem('shell_session'))));
+  const bId = await B.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id);
+  await B.goto(link('signup'));
+  await until(() => B.isVisible('#scr-app'));
+  check('a link for another account never replaces the person signed in', (await B.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id)) === bId);
+  check('…and says so', !!(await until(async () => /different account/.test(await B.textContent('#toast')))));
+  await V.goto(BASE + '/'); await V.evaluate(() => localStorage.setItem('shell_auth_started', String(Date.now())));
+  await V.goto(link('signup'));
+  check('the link works in the browser where the sign-up started', !!(await crmFrame(V)) && (await V.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id)) === mal.user.id);
+
   check('no script errors', errors.length === 0, errors.join('\n       '));
   await browser.close(); await db.end();
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

@@ -463,6 +463,17 @@ REPLACE = [
     ("var name='MARINA_CRM_'+", "var name='CRM_'+", 1),
     ("var name='MARINA_CONTACTS_'", "var name='CRM_CONTACTS_'", 1),
     ("// ── MONARCH BRANDED", "// ── BRANDED", 0),
+    ("""/* ══ SUBURB GROUPING RULE — confirmed by Marina 08/08/26 ══
+   MIDLAND is an umbrella working group, not a strict suburb.
+   It intentionally includes: Viveash, Stratton, Swan View, Bellevue
+   (and historically Woodbridge, which currently has its own tab).
+   Records tagged Midland whose notes name Viveash/Bellevue/etc are
+   CORRECT. Do not 'fix' them back out.
+   Every record now carries an explicit suburb tag - the fallback
+   below is a safety net only, it should never fire in normal use. */""",
+     "/* Every record carries an explicit suburb tag; the street lists below are an unused fallback. */", 1),
+    ("  // Stratton, Viveash, Swan View, Midvale, Bellevue are their own suburbs (same postcode 6056, but distinct areas) - no longer collapsed into Midland", "", 1),
+    ("including ones added later (Sorrento, Duncraig, Stratton, Viveash, Midvale...)", "including ones added later", 0),
     # "+ Add Contact" opens the add-contact form (RP Data has its own button)
     ("  // the fastest way in is a paste from RP Data - offer that first\n  openRPImport();\n  return;",
      "  // RP Data paste has its own button; this one opens the form\n  openAddContactManual();\n  return;", 1),

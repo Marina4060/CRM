@@ -1,7 +1,7 @@
 // Stripe tells us when a subscription starts, renews, changes seats, fails or
 // ends. This is the only thing that records a team's subscription status.
 import Stripe from "npm:stripe@17.7.0";
-import { admin, planForPrice, seatsFor, stripe } from "../_shared/common.ts";
+import { admin, PAID, planForPrice, seatsFor, stripe } from "../_shared/common.ts";
 
 const SECRET = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 const crypto = Stripe.createSubtleCryptoProvider();
@@ -25,11 +25,24 @@ async function saveSubscription(sub: Stripe.Subscription) {
     current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     cancel_at_period_end: !!sub.cancel_at_period_end,
   };
-  let q = admin.from("teams").update(row);
-  q = teamId ? q.eq("id", teamId) : q.eq("stripe_customer_id", customer);
-  const { data, error } = await q.select("id");
-  if (error) throw error;
-  if (!data?.length) console.warn("stripe-webhook: no team for", customer, teamId);
+  // which team: the one named when the checkout was made, otherwise by customer
+  let find = admin.from("teams").select("id, stripe_subscription_id, subscription_status");
+  find = teamId ? find.eq("id", teamId) : find.eq("stripe_customer_id", customer);
+  const { data: teams, error: findError } = await find;
+  if (findError) throw findError;
+  if (!teams?.length) return console.warn("stripe-webhook: no team for", customer, teamId);
+  for (const team of teams) {
+    // a late event about an older subscription must not overwrite the one that is running
+    const current = team.stripe_subscription_id;
+    if (current && current !== sub.id && PAID.includes(team.subscription_status ?? "")) {
+      if (PAID.includes(sub.status)) {
+        console.error("stripe-webhook: team", team.id, "has two live subscriptions:", current, "and", sub.id, "- cancel one in Stripe");
+      }
+      continue;
+    }
+    const { error } = await admin.from("teams").update(row).eq("id", team.id);
+    if (error) throw error;
+  }
 }
 
 Deno.serve(async (req) => {

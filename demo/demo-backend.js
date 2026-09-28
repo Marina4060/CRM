@@ -66,10 +66,12 @@
         inv = db.invites.filter(function (i) { return i.token === a.invite_token && !i.accepted_at && i.expires_at > now(); })[0];
         if (!inv) throw new Err(400, 'This invite link has expired or was already used.');
         if (inv.email.toLowerCase() !== u.email.toLowerCase()) throw new Err(400, 'This invite was sent to ' + inv.email + '. Sign in with that email address to accept it.');
-      } else if (!cur) {
-        inv = db.invites.filter(function (i) { return i.email.toLowerCase() === u.email.toLowerCase() && !i.accepted_at && i.expires_at > now(); }).pop() || null;
       }
       if (inv && (!cur || cur.team_id !== inv.team_id)) {
+        var it = db.teams.filter(function (x) { return x.id === inv.team_id; })[0], ni = count(inv.team_id);
+        if (LIMIT[it.plan] && ni >= LIMIT[it.plan]) throw new Err(400, it.name + ' is full: its plan covers up to ' + LIMIT[it.plan] + ' people. Ask the owner to make room.');
+        if (it.plan === 'per_user' && paid(it) && ni >= Math.max(it.seats, 1)) throw new Err(400, it.name + ' has no free paid seat. Ask the owner to add a seat under Billing.');
+        if (!paid(it) && ni >= 20) throw new Err(400, it.name + ' is full: during the free trial a team can have up to 20 people.');
         if (cur) {
           var n0 = count(cur.team_id), t0 = teamOf(u.id);
           if (cur.role === 'owner' && n0 > 1) throw new Err(400, 'You own a team with other members. Hand it over or remove them before joining another team.');
@@ -86,7 +88,11 @@
         db.members.push({ team_id: t.id, user_id: u.id, role: 'owner', joined_at: now() });
       }
       var team = teamOf(u.id), m = memberOf(u.id);
+      // an invite to another team waiting for this email: offered, never accepted silently
+      var o = db.invites.filter(function (i) { return i.email.toLowerCase() === u.email.toLowerCase() && !i.accepted_at && i.expires_at > now() && i.team_id !== team.id; }).pop();
+      var ot = o && db.teams.filter(function (x) { return x.id === o.team_id; })[0], ob = o && user(o.invited_by);
       return {
+        pending_invite: o && ot ? { token: o.token, team_name: ot.name, role: o.role, invited_by: ob ? (ob.full_name || ob.email) : 'Someone' } : null,
         user: { id: u.id, email: u.email, full_name: u.full_name }, role: m.role,
         team: { id: team.id, name: team.name, trial_ends_at: team.trial_ends_at, subscription_status: team.subscription_status, seats: team.seats,
           members: count(team.id), plan: team.plan, plan_limit: LIMIT[team.plan], shared: shared(team),
@@ -116,7 +122,7 @@
       if (t.plan === 'per_user' && paid(t) && used >= t.seats) throw new Err(400, 'All ' + t.seats + ' paid seats are in use. The owner can add a seat under Billing.');
       if (!paid(t) && used >= 20) throw new Err(400, 'During the free trial a team can have up to 20 people.');
       db.invites = db.invites.filter(function (i) { return !(i.team_id === t.id && i.email === email && !i.accepted_at); });
-      var inv = { id: uid(), team_id: t.id, email: email, role: a.invite_role, token: uid().replace(/-/g, ''), created_at: now(), expires_at: iso(Date.now() + 14 * DAY), accepted_at: null };
+      var inv = { id: uid(), team_id: t.id, email: email, role: a.invite_role, invited_by: u.id, token: uid().replace(/-/g, ''), created_at: now(), expires_at: iso(Date.now() + 14 * DAY), accepted_at: null };
       db.invites.push(inv);
       return { id: inv.id, token: inv.token, email: inv.email, role: inv.role, expires_at: inv.expires_at };
     },

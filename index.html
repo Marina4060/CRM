@@ -790,14 +790,7 @@ var WOODBRIDGE_STREETS=[];
 var CAVERSHAM_STREETS=[];
 var STONEVILLE_STREETS=[];
 var DARLINGTON_STREETS=[];
-/* ══ SUBURB GROUPING RULE — confirmed by the agent 08/08/26 ══
-   MIDLAND is an umbrella working group, not a strict suburb.
-   It intentionally includes: Viveash, Stratton, Swan View, Bellevue
-   (and historically Woodbridge, which currently has its own tab).
-   Records tagged Midland whose notes name Viveash/Bellevue/etc are
-   CORRECT. Do not 'fix' them back out.
-   Every record now carries an explicit suburb tag - the fallback
-   below is a safety net only, it should never fire in normal use. */
+/* Every record carries an explicit suburb tag; the street lists below are an unused fallback. */
 function getSuburb(c){
   if(c.suburb) return c.suburb;
   if(BRABHAM_STREETS.indexOf(c.s)>=0) return 'Brabham';
@@ -1939,7 +1932,7 @@ function rpSuburbFor(p){
     var guard=0;
     while(re.test(found) && guard++<4){ found=found.replace(re,'').trim(); }
     found=found.replace(/^THE\s+/i,'').trim();
-    var map={};  // Stratton, Viveash, Swan View, Midvale, Bellevue are their own suburbs (same postcode 6056, but distinct areas) - no longer collapsed into Midland
+    var map={};
     if(found.length>2){
       sub = map[found] || found.split(' ').map(function(x){ return x.charAt(0)+x.slice(1).toLowerCase(); }).join(' ');
     }
@@ -4096,7 +4089,7 @@ function dedupePills(){
   });
 }
 function setSuburb(s,el){
-  // Works for EVERY suburb tab, including ones added later (Sorrento, Duncraig, Stratton, Viveash, Midvale...)
+  // Works for EVERY suburb tab, including ones added later
   suburbF=s; streetF='all';
   var known={Parkerville:'pkv',Brabham:'brb',Midland:'mid',Caversham:'cav',Stoneville:'stv',Woodbridge:'wbg',Darlington:'drl'};
   var slug = (s==='all') ? '' : (known[s] || (typeof slugFor==='function' ? slugFor(s) : String(s).toLowerCase().replace(/[^a-z]/g,'').slice(0,6)));

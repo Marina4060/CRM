@@ -80,6 +80,12 @@ async function until(fn, ms = 10000) { const t = Date.now(); while (Date.now() -
   check('back to sign-in', !!(await until(() => p.isVisible('#f-signin'))));
   await signUp('Jo Agent', 'jo@agency.test');
   f = await crm();
+  check('the invite is offered, not accepted silently', !!(await until(async () => /Alex Owner invited you to join/.test(await p.textContent('#banner')))), await p.textContent('#banner'));
+  check('before joining, the agent is in a team of their own', /Owner/.test(await p.textContent('#menu-role')), await p.textContent('#menu-role'));
+  await snap('invite-offer');
+  await p.click('#banner .btn:not(.ghost)');
+  await until(async () => /Agent/.test(await p.textContent('#menu-role')));
+  f = await crm();
   check('agent joined the owner\'s team', /Agent/.test(await p.textContent('#menu-role')) && /Alex Owner/.test(await p.textContent('#menu-role')), await p.textContent('#menu-role'));
   check('new person lands on the CRM, not the last person\'s page', await p.isVisible('#tab-crm') && !(await p.isVisible('#tab-team')));
   f = await fillProfile(f, 'Coast Realty', '0400 333 444');

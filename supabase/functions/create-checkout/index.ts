@@ -24,6 +24,18 @@ handle("create-checkout", async (req) => {
     throw new HttpError(409, `Your team has ${members} people; that plan covers up to ${limit}.`);
   }
   const customer = await customerFor(team, user);
+  // never a second subscription: one may already be running, or waiting on a card check
+  const existing = await stripe.subscriptions.list({ customer, status: "all", limit: 20 });
+  const live = existing.data.find((s) => PAID.includes(s.status) || s.status === "incomplete");
+  if (live) {
+    throw new HttpError(409, live.status === "incomplete"
+      ? "A payment for your subscription is still being confirmed. Try again in a few minutes, or use Manage billing."
+      : "Your team already has a subscription. Use Change plan or Manage billing.");
+  }
+  // only the newest checkout page can complete, so paying twice in two tabs isn't possible
+  for await (const open of stripe.checkout.sessions.list({ customer, status: "open", limit: 20 })) {
+    await stripe.checkout.sessions.expire(open.id).catch(() => {});
+  }
   const trialEnd = new Date(team.trial_ends_at).getTime();
   const keepTrial = trialEnd - Date.now() > MIN_TRIAL_MS;
 

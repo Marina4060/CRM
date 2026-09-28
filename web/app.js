@@ -113,7 +113,10 @@
   function refresh() {
     if (refreshing) return refreshing;
     refreshing = req('POST', '/auth/v1/token?grant_type=refresh_token', { refresh_token: session.refresh_token }, { auth: false })
-      .then(function (s) { saveSession(s); })
+      .then(function (s) {
+        if (ctx && !stillMine()) { lost(); throw new NetError('signed out'); }
+        saveSession(s);
+      })
       .catch(function (e) {
         if (e instanceof ApiError) { session = null; lsDel(S_SESSION); showAuth('signin', 'Please sign in again.'); }
         throw e;
@@ -160,6 +163,7 @@
       ev.preventDefault(); var f = ev.target; busy(f, true);
       var inv = sessionStorage.getItem('invite');
       var redirect = siteUrl(inv ? '?invite=' + encodeURIComponent(inv) : '');
+      lsSet(S_AUTHSTART, Date.now());
       req('POST', '/auth/v1/signup?redirect_to=' + encodeURIComponent(redirect),
         { email: f.email.value.trim(), password: f.password.value, data: { full_name: f.name.value.trim() } }, { auth: false })
         .then(function (r) {
@@ -173,6 +177,7 @@
     });
     $('#f-forgot').addEventListener('submit', function (ev) {
       ev.preventDefault(); var f = ev.target; busy(f, true);
+      lsSet(S_AUTHSTART, Date.now());
       req('POST', '/auth/v1/recover?redirect_to=' + encodeURIComponent(siteUrl()), { email: f.email.value.trim() }, { auth: false })
         .then(function () {
           busy(f, false); showAuth('check');
@@ -199,17 +204,37 @@
     return m || 'Something went wrong. Please try again.';
   }
 
-  // tokens arriving in the address bar from an email link
+  // tokens arriving in the address bar from an email link. They are only accepted in the browser
+  // where the sign-up or password reset was started, and never replace someone already signed in:
+  // otherwise a link made by someone else could sign this person into that someone's account.
+  var S_AUTHSTART = 'shell_auth_started';
+  function tokenUser(t) {
+    try { return JSON.parse(atob(String(t).split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).sub || null; } catch (e) { return null; }
+  }
   function readAuthRedirect() {
     var q = new URLSearchParams(location.search);
     if (q.get('invite')) sessionStorage.setItem('invite', q.get('invite'));
     var h = new URLSearchParams(location.hash.replace(/^#/, ''));
-    var out = { type: null, error: null };
+    var out = { type: null, error: null, notice: null, form: null };
     if (h.get('error_description')) out.error = h.get('error_description').replace(/\+/g, ' ');
     if (h.get('access_token')) {
-      saveSession({ access_token: h.get('access_token'), refresh_token: h.get('refresh_token'),
-        expires_in: Number(h.get('expires_in')) || 3600, user: {} });
-      out.type = h.get('type');
+      var type = h.get('type'), sub = tokenUser(h.get('access_token'));
+      var cur = lsGet(S_SESSION, null), curId = cur && cur.user && cur.user.id;
+      var started = Date.now() - lsGet(S_AUTHSTART, 0) < 3 * 86400e3;
+      if (curId && curId !== sub) {
+        out.notice = 'That link is for a different account. Sign out first, then open it again.';
+      } else if (started || (curId && curId === sub)) {
+        lsDel(S_AUTHSTART);
+        saveSession({ access_token: h.get('access_token'), refresh_token: h.get('refresh_token'),
+          expires_in: Number(h.get('expires_in')) || 3600, user: { id: sub } });
+        out.type = type;
+      } else if (type === 'recovery') {
+        out.form = 'forgot';
+        out.error = 'For your security, open the reset link in the same browser where you asked for it. You can ask for a new link here.';
+      } else {
+        out.notice = 'Your email address is confirmed. Please sign in.';
+      }
+      out.type = out.type || 'ignored';
     }
     if (out.error || out.type) history.replaceState(null, '', location.pathname + (q.get('checkout') ? '?checkout=' + q.get('checkout') : ''));
     return out;
@@ -229,16 +254,31 @@
   }
   // a CRM key changed: the contact list goes to the agency on agency plans, everything else to the person's own copy
   function changed(k) {
-    if (isShared() && SHARED_KEYS.indexOf(k) >= 0) teamSoon(); else markPending(k);
+    if ((isShared() || /^team:/.test(lsGet(S_MODE, '') || '')) && SHARED_KEYS.indexOf(k) >= 0) teamSoon(); else markPending(k);
   }
   function markPending(k) {
+    if (ctx && !stillMine()) return lost();
     if (pending.indexOf(k) < 0) { pending.push(k); lsSet(S_PENDING, pending); }
     setSync('busy');
     clearTimeout(flushTimer); flushTimer = setTimeout(flush, 1200);
   }
+  // is this screen still the account that is signed in on this device? Another tab may have
+  // signed out, or signed in as someone else: then nothing may be sent from here any more.
+  function stillMine() {
+    if (!session || !ctx || !ctx.user) return false;
+    var s = lsGet(S_SESSION, null);
+    return lsGet(S_OWNER, null) === ctx.user.id && !!s && !!s.user && s.user.id === ctx.user.id;
+  }
+  function lost() {
+    clearTimeout(flushTimer); clearTimeout(teamTimer); clearTimeout(statsTimer);
+    session = null; ctx = null; pending = [];
+    var f = $('#crm-frame'); if (f) f.srcdoc = '';
+    location.reload();
+  }
   // the CRM runs in a frame on this same site, so each change it saves reaches us as a storage event
   window.addEventListener('storage', function (e) {
     if (!session || !ctx) return;
+    if (!stillMine()) return lost();
     if (e.key === null) { syncKeys().forEach(changed); Object.keys(known).forEach(changed); return; }
     if (isSyncKey(e.key)) { changed(e.key); statsSoon(e.key); }
   });
@@ -247,7 +287,9 @@
     if (flushing) { clearTimeout(flushTimer); flushTimer = setTimeout(flush, 800); return flushing; }
     if (!pending.length || !session || !ctx) { if (!pending.length) setSync('ok'); return Promise.resolve(); }
     if (!ctx.access) { setSync('off', 'Not saving'); return Promise.resolve(); }
-    if (isShared()) {
+    if (!stillMine()) { lost(); return Promise.resolve(); }
+    // the agency's list is never copied into a personal copy (also right after leaving an agency plan)
+    if (isShared() || /^team:/.test(lsGet(S_MODE, '') || '')) {
       pending = pending.filter(function (k) { return SHARED_KEYS.indexOf(k) < 0; }); lsSet(S_PENDING, pending);
       if (!pending.length) { setSync('ok'); return Promise.resolve(); }
     }
@@ -264,6 +306,7 @@
     if (dels.length) jobs.push(rest('DELETE', '/crm_state?user_id=eq.' + ctx.user.id + '&key=in.(' + dels.map(function (k) { return '"' + k + '"'; }).join(',') + ')')
       .then(function () { dels.forEach(function (k) { delete known[k]; }); }));
     flushing = Promise.all(jobs).then(function () {
+      if (!stillMine()) return;
       pending = pending.filter(function (k) { return keys.indexOf(k) < 0; });
       lsSet(S_PENDING, pending); lsSet(S_KNOWN, known);
       setSync(pending.length ? 'busy' : 'ok');
@@ -379,6 +422,7 @@
     if (!isShared() || !ctx.access) return Promise.resolve();
     if (teamPushing) { clearTimeout(teamTimer); teamTimer = setTimeout(pushTeam, 800); return teamPushing; }
     if (!lsGet(S_TEAMDIRTY, false)) return Promise.resolve();
+    if (!stillMine()) { lost(); return Promise.resolve(); }
     var rows = rowsFrom(lsGet('crm_data_v4', []), lsGet('crm_activity_log', {}), ctx.user.id);
     var ups = [], dels = [], sigs = {};
     Object.keys(rows).forEach(function (k) {
@@ -404,9 +448,11 @@
         .then(function () { delete teamSnap[k]; delete teamSeen[k]; delete crmKeys[k]; }));
     });
     teamPushing = Promise.all(jobs).then(function () {
+      if (!stillMine()) return;
       lsSet(S_TEAMSNAP, teamSnap); lsDel(S_TEAMDIRTY);
       setSync(pending.length ? 'busy' : 'ok', pending.length ? null : 'Synced · shared');
     }).catch(function (e) {
+      if (!stillMine()) return;
       lsSet(S_TEAMSNAP, teamSnap);
       if (e instanceof NetError) setSync('off');
       else if (e.status === 401 || e.status === 403 || /row-level security/i.test(e.message)) { setSync('off', 'Not saving'); recheckAccess(); }
@@ -420,6 +466,7 @@
     return pushTeam().then(function () {
       return rest('GET', '/team_contacts?select=ckey,record,activity,updated_at&team_id=eq.' + ctx.team.id + '&order=created_at.asc,ckey.asc');
     }).then(function (rows) {
+      if (!stillMine()) return;
       var data = [], act = {};
       teamSnap = {}; teamSeen = {}; crmKeys = {};
       rows.forEach(function (r) {
@@ -447,6 +494,7 @@
         if (r.updated_by !== ctx.user.id && (!teamSeen[r.ckey] || r.updated_at > teamSeen[r.ckey])) n++;
       });
       Object.keys(teamSeen).forEach(function (k) { if (!seen[k]) n++; });
+      if (!rows.length && n) return recheckAccess();
       if (n) banner(n + ' contact' + (n === 1 ? ' was' : 's were') + ' updated by your team.', 'Load changes', function () { reloadCrm(true); });
     }).catch(function () { });
   }
@@ -507,7 +555,7 @@
     return s;
   }
   function pushStats() {
-    if (!ctx || !ctx.access) return Promise.resolve();
+    if (!ctx || !ctx.access || !stillMine()) return Promise.resolve();
     return rest('POST', '/member_stats?on_conflict=user_id', [{ user_id: ctx.user.id, stats: computeStats() }],
       { prefer: 'resolution=merge-duplicates,return=minimal' }).catch(function () { });
   }
@@ -537,13 +585,32 @@
   function offlineStart() {
     var last = lsGet(S_LASTOK, 0), owner = lsGet(S_OWNER, null);
     if (session && owner && (!session.user.id || owner === session.user.id) && Date.now() - last < OFFLINE_GRACE_MS) {
+      session.user.id = owner;
       ctx = ctx || { user: { id: owner, email: session.user.email }, role: 'agent', team: { name: '' }, access: true, offline: true };
       return openApp().then(function () { setSync('off'); toast("You're offline. Your changes are kept on this device."); });
     }
     show('scr-loading'); $('#loading-msg').innerHTML = 'No internet connection.<br><a href="">Try again</a>';
   }
   function recheckAccess() {
-    return rpc('app_context', {}).then(function (c) { ctx = c; paintChrome(); if (!c.access) blocked(); }).catch(function () { });
+    return rpc('app_context', {}).then(function (c) {
+      var was = ctx;
+      if (!was) return;
+      if (!stillMine() || c.user.id !== was.user.id) return lost();
+      ctx = c; paintChrome();
+      // moved to another team (e.g. removed), or the shared list was switched on or off:
+      // this device must drop the list it no longer belongs to
+      var moved = !was.team || was.team.id !== c.team.id || !!was.team.shared !== !!c.team.shared;
+      if (!c.access) {
+        if (moved && was.team && was.team.shared) {
+          $('#crm-frame').srcdoc = '';
+          SHARED_KEYS.forEach(function (k) { lsDel(k); delete known[k]; });
+          pending = pending.filter(function (k) { return SHARED_KEYS.indexOf(k) < 0; }); lsSet(S_PENDING, pending);
+          teamSnap = {}; teamSeen = {}; crmKeys = {}; lsDel(S_TEAMSNAP); lsDel(S_TEAMDIRTY); lsDel(S_MODE);
+        }
+        return blocked();
+      }
+      if (moved) reloadCrm(true);
+    }).catch(function () { });
   }
 
   function blocked() {
@@ -560,6 +627,9 @@
     $('#blocked-portal').hidden = !owner || !t.has_billing;
     $('#blocked-support').href = 'mailto:' + (C.supportEmail || '');
     if (seatsShort && owner) { $('#blocked-subscribe').hidden = false; $('#blocked-subscribe').textContent = 'Add seats'; }
+    var o = ctx.pending_invite, inv = $('#blocked-invite');
+    inv.hidden = !o;
+    if (o) { $('span', inv).textContent = inviteText(o); $('button', inv).onclick = function () { joinInvite(o); }; }
   }
 
   function openApp() {
@@ -572,6 +642,7 @@
       pushStats();
       handleCheckoutReturn();
       maybeShowInstallHint();
+      offerInvite();
     });
   }
 
@@ -598,7 +669,13 @@
       }
       var f = $('#crm-frame');
       // tell the CRM it runs online (its cloud copy is the backup, so no backup reminders)
-      f.srcdoc = html.replace(/<head>/i, '<head><script>window.CRM_HOSTED=true</' + 'script>');
+      // and that it may only write to this device while the account it was opened for is signed in here
+      // (another tab may sign out, or sign someone else in)
+      var guard = '(function(o){var P=Storage.prototype,s=P.setItem,r=P.removeItem,c=P.clear;' +
+        'function ok(){try{return JSON.parse(localStorage.getItem("shell_owner"))===o}catch(e){return false}}' +
+        'P.setItem=function(k,v){if(ok())return s.call(this,k,v)};P.removeItem=function(k){if(ok())return r.call(this,k)};' +
+        'P.clear=function(){if(ok())return c.call(this)}})(' + JSON.stringify(String(ctx.user.id)).replace(/</g, '\\u003c') + ');';
+      f.srcdoc = html.replace(/<head>/i, '<head><script>window.CRM_HOSTED=true;' + guard + '</' + 'script>');
       checkVersion();
     }).catch(function (e) {
       $('#tab-crm').innerHTML = '<div class="page"><div class="card"><h2>The CRM could not be loaded</h2><p>' + esc(e.message) + '</p><p><a href="">Try again</a></p></div></div>';
@@ -650,6 +727,24 @@
     bs[bs.length - 1].onclick = hideBanner;
   }
   function hideBanner() { $('#banner').hidden = true; }
+
+  // someone invited this email address to their team: ask, never join silently
+  function inviteText(o) { return o.invited_by + ' invited you to join ' + o.team_name + (o.role === 'admin' ? ' as an admin.' : '.'); }
+  function joinInvite(o) {
+    var own = ctx && ctx.role === 'owner' && ctx.team && ctx.team.members > 1;
+    if (!confirm('Join ' + o.team_name + '?' + (own ? '' : ' Your own contacts stay with your account.') +
+      (ctx && ctx.team && ctx.team.shared ? ' You will leave the shared list of ' + ctx.team.name + '.' : ''))) return;
+    hideBanner(); $('#blocked-invite').hidden = true;
+    sessionStorage.setItem('invite', o.token);
+    $('#crm-frame').srcdoc = '';
+    start();
+  }
+  function offerInvite() {
+    var o = ctx && ctx.pending_invite;
+    if (!o || sessionStorage.getItem('invite_later') === o.token) return;
+    banner(inviteText(o), 'Join', function () { joinInvite(o); });
+    $$('#banner button')[1].addEventListener('click', function () { sessionStorage.setItem('invite_later', o.token); });
+  }
 
   // ─────────────── pages ───────────────
   function route() {
@@ -991,7 +1086,7 @@
 
   function signOut() {
     var go = function () {
-      clearLocal(); lsDel(S_OWNER); lsDel(S_SESSION); homePage(); hideBanner();
+      lsDel(S_SESSION); lsDel(S_OWNER); clearLocal(); homePage(); hideBanner();
       $('#crm-frame').srcdoc = '';
       var s = session; session = null; ctx = null;
       if (s) fetch(API + '/auth/v1/logout', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + s.access_token } }).catch(function () { });
@@ -1016,10 +1111,11 @@
   }
   var r = readAuthRedirect();
   session = session || lsGet(S_SESSION, null);
-  if (r.error) showAuth('signin', r.error);
+  if (r.error) showAuth(r.form || 'signin', r.error);
   else if (r.type === 'recovery' && session) showAuth('newpass');
   else if (session) start();
   else showAuth(new URLSearchParams(location.search).get('invite') ? 'signup' : 'signin');
+  if (r.notice) toast(r.notice, 8000);
 
   // for tests
   window.__shell = { flush: flush, pushStats: pushStats, computeStats: computeStats, pending: function () { return pending.slice(); } };

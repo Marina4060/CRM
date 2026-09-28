@@ -77,7 +77,7 @@ Do the same whenever you change the CRM. Everyone gets the new version the next 
 
 ## 6. Try it (test mode)
 
-1. Open the site, create an account and check the confirmation email.
+1. Open the site, create an account and open the confirmation email's link in the same browser.
 2. Add a contact, then sign in on your phone and check the contact is there. On your phone, use *Add to Home Screen*.
 3. **Team:** invite a second email address, open the link in another browser and sign up. The dashboard should show both people.
 4. **Billing → Subscribe:** pay with Stripe's test card `4242 4242 4242 4242` (any future date, any CVC). The top bar should change to *Subscribed*.
@@ -118,9 +118,15 @@ If someone asks for their account to be deleted, delete them in *Authentication 
 - **Agency plans:** the contact list and each contact's activity (calls, texts, notes) are shared by everyone in the team. Each contact is saved separately, so two agents working at the same time don't overwrite each other. If both edit the *same* contact at once, the later save wins. Every call, text and note records who made it, and the dashboard shows each agent's contacts added and activity. Diary, appointments, templates, expenses, logbook and buyers stay personal.
 - **Moving to an agency plan:** each person's earlier contacts stay private. The Team page offers to add them to the shared list. **Moving back to Per agent:** everyone returns to their own contacts, and the shared list is kept in case you return.
 - **Limits:** Agency 10 allows up to 10 people and Agency 20 up to 20, counting pending invites. A trial team can have up to 20 people.
-- Use the CRM in one browser tab at a time. Two tabs on the same device share one local copy.
+- **Invites:** the invite link joins the team. Someone who signs up with an invited email but without the link sees "… invited you to join …" with a **Join** button: nobody is added to a team without saying yes. Joining checks the team still has room (its plan limit, or its paid seats).
+- Use the CRM in one browser tab at a time. Two tabs on the same device share one local copy. Signing out in one tab closes the account in every tab, and a tab left open never sends anything once another account is signed in on the device.
+- **Email links** (confirm email, reset password) sign in only in the browser where they were asked for. Opened anywhere else, the app just asks the person to sign in (or to ask for a new reset link), so a link made by someone else can't sign a person into the wrong account.
+- **Removed agents** lose the agency's shared list on their screen straight away, and it is never copied into their own account.
+- **Payments:** a team can't start a second subscription while one is running or awaiting a card check, and starting checkout closes any older checkout page. A late Stripe event about an old subscription never overwrites the one that is running.
+- On agency plans, the database credits each new call, text or note to whoever saved it, so nobody can log activity in a teammate's name.
 - The trial is 14 days from when a person signs up. Leaving and re-joining teams doesn't restart it.
 - A team has access while it's in trial, or while it's paying for at least as many seats as it has people. When a card fails (`past_due`), access continues while Stripe retries. After a subscription ends, people can still sign in to download their data, but can't use the CRM.
+- Data of accounts that ended, and of people who are no longer in any team, is deleted by `purge_expired_data` after the retention period (see step 7).
 - These rules are enforced by the database itself (row-level security), not just the website. `supabase/tests/permissions_test.sh` checks them.
 
 ## Testing

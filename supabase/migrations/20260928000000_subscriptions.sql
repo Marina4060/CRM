@@ -119,11 +119,26 @@ create trigger member_stats_touch before update on public.member_stats for each 
 -- who added and who last changed a shared contact is recorded by the database, not the app
 create function public.stamp_team_contact() returns trigger
 language plpgsql as $$
+declare
+  before jsonb := '[]'::jsonb;
 begin
   if tg_op = 'INSERT' then
     new.created_at := now(); new.created_by := auth.uid();
+    -- an upsert of a contact the team already has continues as an update: credit nothing here
+    if exists (select 1 from public.team_contacts where team_id = new.team_id and ckey = new.ckey) then
+      before := null;
+    end if;
   else
     new.created_at := old.created_at; new.created_by := old.created_by; new.team_id := old.team_id;
+    before := old.activity;
+  end if;
+  -- calls, texts and notes that are new in this change are credited to whoever sent it,
+  -- so nobody can log activity in a teammate's name
+  if before is not null and auth.uid() is not null and jsonb_typeof(new.activity) = 'array' then
+    new.activity := coalesce((
+      select jsonb_agg(case when jsonb_typeof(e) = 'object' and not (before @> jsonb_build_array(e))
+                            then e || jsonb_build_object('by', auth.uid()) else e end order by i)
+      from jsonb_array_elements(new.activity) with ordinality as x(e, i)), '[]'::jsonb);
   end if;
   new.updated_at := now(); new.updated_by := auth.uid();
   return new;
@@ -267,6 +282,7 @@ declare
   cur public.team_members;
   t public.teams;
   n int;
+  offer jsonb;
 begin
   if uid is null then raise exception 'not signed in'; end if;
   select * into p from public.profiles where id = uid;
@@ -277,7 +293,8 @@ begin
   end if;
   select * into cur from public.team_members where user_id = uid;
 
-  -- an invite: by link, or waiting for this email address
+  -- an invite is accepted only by its token (the link, or "Join" in the app);
+  -- one waiting for this email address is offered below, never accepted silently
   if invite_token is not null then
     select * into inv from public.invites
       where token = invite_token and accepted_at is null and expires_at > now();
@@ -285,13 +302,19 @@ begin
     if lower(inv.email) <> lower(p.email) then
       raise exception 'This invite was sent to %. Sign in with that email address to accept it.', inv.email;
     end if;
-  elsif cur.user_id is null then
-    select * into inv from public.invites
-      where lower(email) = lower(p.email) and accepted_at is null and expires_at > now()
-      order by created_at desc limit 1;
   end if;
 
   if inv.id is not null and (cur.user_id is null or cur.team_id <> inv.team_id) then
+    -- the team must still have room (the plan or seats may have changed since the invite)
+    select * into t from public.teams where id = inv.team_id;
+    select count(*) into n from public.team_members where team_id = inv.team_id;
+    if public.plan_limit(t.plan) is not null and n >= public.plan_limit(t.plan) then
+      raise exception '% is full: its plan covers up to % people. Ask the owner to make room.', t.name, public.plan_limit(t.plan);
+    elsif t.plan = 'per_user' and public.team_paid(t) and n >= greatest(t.seats, 1) then
+      raise exception '% has no free paid seat. Ask the owner to add a seat under Billing.', t.name;
+    elsif not public.team_paid(t) and n >= 20 then
+      raise exception '% is full: during the free trial a team can have up to 20 people.', t.name;
+    end if;
     if cur.user_id is not null then
       -- leaving a team of one: fine unless it is paying
       select * into t from public.teams where id = cur.team_id;
@@ -318,7 +341,17 @@ begin
   select * into cur from public.team_members where user_id = uid;
   select * into t from public.teams where id = cur.team_id;
   select count(*) into n from public.team_members where team_id = t.id;
+  -- an invite to another team waiting for this email: the app asks before joining
+  select jsonb_build_object('token', i.token, 'team_name', tt.name, 'role', i.role,
+                            'invited_by', coalesce(nullif(ip.full_name, ''), ip.email))
+    into offer
+    from public.invites i
+    join public.teams tt on tt.id = i.team_id
+    left join public.profiles ip on ip.id = i.invited_by
+    where lower(i.email) = lower(p.email) and i.accepted_at is null and i.expires_at > now() and i.team_id <> t.id
+    order by i.created_at desc limit 1;
   return jsonb_build_object(
+    'pending_invite', offer,
     'user', jsonb_build_object('id', uid, 'email', p.email, 'full_name', p.full_name),
     'role', cur.role,
     'team', jsonb_build_object(
@@ -521,7 +554,7 @@ create function public.purge_expired_data(days int default 90) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
   cutoff timestamptz := now() - make_interval(days => days);
-  teams_done int; people int; contacts int;
+  teams_done int; people int; contacts int; n int;
 begin
   create temp table expired on commit drop as
     select t.id from public.teams t
@@ -533,6 +566,18 @@ begin
   delete from public.crm_state where user_id in (select user_id from public.team_members where team_id in (select id from expired));
   get diagnostics people = row_count;
   delete from public.member_stats where user_id in (select user_id from public.team_members where team_id in (select id from expired));
+  -- people no longer in any team (removed or left, and never came back): their own copy goes
+  -- once their trial and their last change are both older than the retention period
+  create temp table teamless on commit drop as
+    select pr.id from public.profiles pr
+    where not exists (select 1 from public.team_members m where m.user_id = pr.id)
+      and greatest(pr.trial_ends_at,
+                   coalesce((select max(s.updated_at) from public.crm_state s where s.user_id = pr.id), pr.trial_ends_at),
+                   coalesce((select ms.updated_at from public.member_stats ms where ms.user_id = pr.id), pr.trial_ends_at)) < cutoff;
+  delete from public.crm_state where user_id in (select id from teamless);
+  get diagnostics n = row_count;
+  people := people + n;
+  delete from public.member_stats where user_id in (select id from teamless);
   return jsonb_build_object('teams', teams_done, 'crm_rows', people, 'shared_contacts', contacts);
 end $$;
 revoke execute on function public.purge_expired_data(int) from public, anon, authenticated;
