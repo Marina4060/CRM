@@ -26,6 +26,7 @@
     '<li><b>Team dashboard.</b> As the owner, open <b>Team</b> for each person\'s contacts added, calls, texts and emails.</li>' +
     '<li><b>Subscribe.</b> On <b>Billing</b>, tap Subscribe (payment is simulated).</li>' +
     '<li><b>Trial ending.</b> Use the button below to see what people see when the trial runs out.</li>' +
+    '<li><b>Delete account.</b> Open the round button top right, then <b>Delete my account</b>.</li>' +
     '</ol>' +
     '<p class="muted small">Everything you enter stays only in this browser. Stripe and emails are simulated. Downloads and backups don\'t work inside this preview.</p>' +
     '<div class="row wrap"><button type="button" class="btn small" id="demo-end">End the free trial now</button>' +
