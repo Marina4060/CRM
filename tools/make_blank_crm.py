@@ -187,7 +187,42 @@ def clear_snapshot(html):
             html = remove_element(html, p)
     html = empty_element(html, 'cr-street-filter', keep='<option value="all">All Streets</option>',
                          required=False)
+    # suburb drop-downs listed the old patch; they fill from the user's contacts at runtime
+    for sel in ('cr-suburb-filter', 'camp-suburb', 'be-suburb'):
+        html = empty_element(html, sel, keep='<option value="all">All Suburbs</option>', required=False)
+    for sel in ('ac-suburb', 'ac-bulk-suburb'):
+        html = empty_element(html, sel, keep='<option value="">Choose suburb…</option>', required=False)
+
+    # banners, badges and pop-ups the CRM had added to the page when it was saved
+    # (pipeline projection, "238 stale leads", "3-month look (81)", backup and
+    # bookkeeping reminders). The CRM adds them again itself when there is data.
+    for el in ('auto-banner', 'review-btn', 'book-chip'):
+        if find_element(html, el):
+            html = remove_element(html, el)
+    while True:
+        ranges = script_ranges(html)
+        m = next((m for m in re.finditer(r'<(div|button)\b[^>]*style="position: fixed[^"]*"[^>]*>', html)
+                  if not in_ranges(m.start(), ranges)), None)
+        if not m:
+            break
+        html = _remove_at(html, m.start(), m.group(1))
     return html
+
+
+def _remove_at(html, start, tag):
+    """Remove the element whose opening tag starts at `start`."""
+    depth, pos = 0, start
+    tok = re.compile(r'<(/?)%s\b[^>]*?(/?)>' % tag, re.I)
+    while True:
+        t = tok.search(html, pos)
+        must(t, 'unbalanced <%s> at %d' % (tag, start))
+        if t.group(1):
+            depth -= 1
+        elif not t.group(2):
+            depth += 1
+        pos = t.end()
+        if depth == 0:
+            return html[:start] + html[pos:]
 
 
 # ─────────────────────────── 3. the agent's identity ───────────────────────────
@@ -300,6 +335,26 @@ def rewrite_call_list(html):
     for a, b, n in REPLACE:
         if n == 0:
             src = src.replace(a, b)
+    # the call list was set up for one agent's patch (Duncraig): start from the user's own suburbs instead
+    for a, b in [
+        ("const NEAR_DUNCRAIG = ['Carine','Greenwood','Hamersley','Hillarys','Kingsley','Marmion','Padbury','Sorrento','Warwick'];",
+         "// suburbs from the CRM's own contacts, suggested for the list\n"
+         "const crmSuburbs = () => [...new Set((S.contacts || []).map(c => titleCase(c.suburb)).filter(Boolean))].sort();"),
+        ("const mySubs = () => S.meta.suburbs || (S.meta.suburbs = ['Duncraig']);",
+         "const mySubs = () => S.meta.suburbs || (S.meta.suburbs = crmSuburbs());"),
+        ("const left = NEAR_DUNCRAIG.filter(", "const left = crmSuburbs().filter("),
+        ('<p class="hint" style="margin:14px 0 0">Near Duncraig, tap to add:</p>',
+         '<p class="hint" style="margin:14px 0 0">Suburbs in your CRM, tap to add:</p>'),
+        ("text:'Duncraig is set up already. Add the other suburbs you work here, and see progress for each one.'",
+         "text:'The suburbs you work. Add them here and see progress for each one.'"),
+        ("15 Nicholli Street Duncraig WA 6023 Sold $850,000 12 Aug 2026", "15 Example Street Suburb WA 6000 Sold $850,000 12 Aug 2026"),
+        ('"a property on your street at 15 Nicholli Street sold in August for $850,000"', '"a property on your street at 15 Example Street sold in August for $850,000"'),
+        ("like 15 Nicholli Street Duncraig WA 6023 Sold $850,000.", "like 15 Example Street Suburb WA 6000 Sold $850,000."),
+        ("like 1 Abelia Court Duncraig WA 6023.", "like 1 Example Court Suburb WA 6000."),
+    ]:
+        must(src.count(a) >= 1, 'call list text not found: ' + a[:60])
+        src = src.replace(a, b)
+    must('Duncraig' not in src, 'call list still mentions Duncraig')
     # templates: the agency comes from the profile placeholder
     src = re.sub(r'\bMonarch Real Estate\b', '{my agency}', src)
     src = re.sub(r'\bMarina Dacheva\b', '{my name}', src)
@@ -403,6 +458,16 @@ REPLACE = [
     ("var MY_SUBURB_MIN=2;", "var MY_SUBURB_MIN=1;", 1),
     # no logo uploaded: leave the logo spots out of emails
     ("    + (_eo.logo ? ('<tr>", "    + (_eo.logo && MONARCH_LOGO ? ('<tr>", 1),
+    # file names for backups and exports
+    ("var name='MARINA_CRM_BACKUP_'", "var name='CRM_BACKUP_'", 1),
+    ("var name='MARINA_CRM_'+", "var name='CRM_'+", 1),
+    ("var name='MARINA_CONTACTS_'", "var name='CRM_CONTACTS_'", 1),
+    ("// ── MONARCH BRANDED", "// ── BRANDED", 0),
+    # "+ Add Contact" opens the add-contact form (RP Data has its own button)
+    ("  // the fastest way in is a paste from RP Data - offer that first\n  openRPImport();\n  return;",
+     "  // RP Data paste has its own button; this one opens the form\n  openAddContactManual();\n  return;", 1),
+    # online, everything is saved to the cloud as you go, so no "back up now" reminder
+    ("function backupNudge(){\n  try{", "function backupNudge(){\n  if(window.CRM_HOSTED) return;\n  try{", 1),
     # AI assistant
     ("'You are an AI assistant in M&I CRM for a real estate team in Parkerville WA 6081.",
      "'You are an AI assistant in the CRM of '+ME.name+', a real estate agent at '+ME.agency+'.", 1),

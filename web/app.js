@@ -126,6 +126,8 @@
     return Promise.resolve();
   }
   function siteUrl(extra) { return location.origin + location.pathname + (extra || ''); }
+  // a fresh sign-in always opens on the CRM, not on whatever page the last person had open
+  function homePage() { if (location.hash) history.replaceState(null, '', location.pathname + location.search); }
 
   function showAuth(which, err) {
     show('scr-auth');
@@ -151,7 +153,7 @@
     $('#f-signin').addEventListener('submit', function (ev) {
       ev.preventDefault(); var f = ev.target; busy(f, true);
       req('POST', '/auth/v1/token?grant_type=password', { email: f.email.value.trim(), password: f.password.value }, { auth: false })
-        .then(function (s) { saveSession(s); busy(f, false); f.reset(); return start(); })
+        .then(function (s) { saveSession(s); busy(f, false); f.reset(); homePage(); return start(); })
         .catch(function (e) { fail(f, e); });
     });
     $('#f-signup').addEventListener('submit', function (ev) {
@@ -162,7 +164,7 @@
         { email: f.email.value.trim(), password: f.password.value, data: { full_name: f.name.value.trim() } }, { auth: false })
         .then(function (r) {
           busy(f, false);
-          if (r && r.access_token) { saveSession(r); f.reset(); return start(); }
+          if (r && r.access_token) { saveSession(r); f.reset(); homePage(); return start(); }
           showAuth('check');
           $('#auth-check-msg').textContent = 'We sent a link to ' + f.email.value.trim() + '. Open it on this device to finish setting up your account.';
           f.reset();
@@ -595,7 +597,8 @@
         try { localStorage.setItem('crm_profile', JSON.stringify({ name: ctx.user.full_name || '', email: ctx.user.email || '' })); markPending('crm_profile'); } catch (e) { }
       }
       var f = $('#crm-frame');
-      f.srcdoc = html;
+      // tell the CRM it runs online (its cloud copy is the backup, so no backup reminders)
+      f.srcdoc = html.replace(/<head>/i, '<head><script>window.CRM_HOSTED=true</' + 'script>');
       checkVersion();
     }).catch(function (e) {
       $('#tab-crm').innerHTML = '<div class="page"><div class="card"><h2>The CRM could not be loaded</h2><p>' + esc(e.message) + '</p><p><a href="">Try again</a></p></div></div>';
@@ -988,7 +991,7 @@
 
   function signOut() {
     var go = function () {
-      clearLocal(); lsDel(S_OWNER); lsDel(S_SESSION);
+      clearLocal(); lsDel(S_OWNER); lsDel(S_SESSION); homePage(); hideBanner();
       $('#crm-frame').srcdoc = '';
       var s = session; session = null; ctx = null;
       if (s) fetch(API + '/auth/v1/logout', { method: 'POST', headers: { apikey: KEY, Authorization: 'Bearer ' + s.access_token } }).catch(function () { });
