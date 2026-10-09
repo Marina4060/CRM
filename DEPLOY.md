@@ -13,7 +13,7 @@ Data is saved to the cloud and syncs between phone and computer. Teams have role
 ```
 web/                 the website people open (sign in, CRM, Team, Billing, Help, terms, privacy)
 index.html           the CRM itself; uploaded to private storage, only paying users can load it
-supabase/migrations  database: accounts, teams, roles, invites, trial, synced data, support
+supabase/migrations  database: accounts, teams, roles, invites, trial, synced data, support, receipts
 supabase/functions   Stripe: checkout, change plan, change seats, billing portal, webhook
 tools/publish_app.py rolls out a new CRM version to everyone
 tests/               end-to-end test (see Testing)
@@ -51,6 +51,7 @@ supabase functions deploy change-plan
 supabase functions deploy set-seats
 supabase functions deploy billing-portal
 supabase functions deploy delete-account
+supabase functions deploy purge-receipts
 supabase functions deploy stripe-webhook --no-verify-jwt
 
 supabase secrets set STRIPE_SECRET_KEY=sk_test_... SITE_URL=https://crm.yourdomain.com.au \
@@ -96,7 +97,21 @@ The privacy policy promises that data is deleted 90 days after a team's trial or
 select cron.schedule('purge-expired-crm-data', '30 3 * * *', 'select public.purge_expired_data(90)');
 ```
 
-If someone asks for their account to be deleted, delete them in *Authentication → Users*. Their data is removed with them.
+Receipts are files, which only the Storage API can delete, so a second job calls the `purge-receipts` function each night. Also enable **pg_net** under *Database → Extensions*, then run this once, with your project address and *service_role* key from *Project Settings → API*. The key goes into Supabase's Vault, not into the job itself:
+
+```
+select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
+select vault.create_secret('<service_role key>', 'service_role_key');
+select cron.schedule('purge-expired-receipts', '45 3 * * *', $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/purge-receipts',
+    headers := jsonb_build_object('Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'service_role_key')),
+    body := '{"days": 90}'::jsonb)
+$$);
+```
+
+If someone asks for their account to be deleted, the simplest way is for them to use *Delete my account* in the app, which removes everything including their receipts. If you delete them yourself in *Authentication → Users*, their CRM data goes with them, but also delete their folder (named after their user id) in *Storage → receipts*.
 
 ## Running the service
 
@@ -137,10 +152,10 @@ If someone asks for their account to be deleted, delete them in *Authentication 
 On a machine with PostgreSQL 16 and Node:
 
 ```
-# the database rules (84 checks)
+# the database rules (96 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (53 + 38 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (63 + 38 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!

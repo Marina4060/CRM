@@ -80,6 +80,32 @@ const serverState = async (email, key) => (await db.query(
   check('first device loads the change', f && (await until(() => f.evaluate(() => data.length === 2))));
   if (SHOTS) await A2.screenshot({ path: SHOTS + '/2-phone.png' });
 
+  console.log('receipts: added on the computer, opened on the phone');
+  const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR42mP8z8DwnxEFMBkYAQDfvwf9e7a2OAAAAABJRU5ErkJggg==', 'base64');
+  const ownerId = await A.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id);
+  await f.evaluate(() => openExp());
+  await f.setInputFiles('#exp-receipt-file', { name: 'fuel.png', mimeType: 'image/png', buffer: PNG });
+  await f.fill('#exp-desc', 'Fuel'); await f.fill('#exp-amount', '50'); await f.evaluate(() => addExpense());
+  const expId = await until(() => f.evaluate(() => { var e = expenses.find((x) => x.desc === 'Fuel'); return e && e.receipt && e.receipt.cloud ? e.id : null; }));
+  check('the receipt is uploaded online', !!expId);
+  const stored = await (await fetch(BASE + '/__test/receipts')).json();
+  check('…into the owner\'s own folder', stored.indexOf(ownerId + '/' + expId) >= 0, JSON.stringify(stored));
+  check('Expenses says receipts are saved online', !!(await until(async () => /1 receipt saved online/.test(await f.textContent('#exp-receipt-note')))));
+  await until(async () => (await A.evaluate(() => window.__shell.pending().length)) === 0);
+  await A2.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  if (await until(() => A2.isVisible('#banner'))) await A2.click('#banner .btn:not(.ghost)');
+  let g2 = await until(async () => { const x = await crmFrame(A2); return x && (await x.evaluate((id) => expenses.some((e) => e.id === id), expId)) ? x : null; });
+  check('the expense reaches the phone', !!g2);
+  if (g2) {
+    check('…without the receipt file on the phone yet', await g2.evaluate((id) => __receipts.get(id).then((r) => !r), expId));
+    await g2.evaluate((id) => __receipts.view(id), expId);
+    check('opening it on the phone downloads and shows the photo', !!(await until(() => g2.evaluate(() => { const i = document.querySelector('#rcpt-modal img'); return !!i && i.complete && i.naturalWidth > 0; }))));
+    await g2.evaluate(() => { const m = document.getElementById('rcpt-modal'); if (m) m.remove(); });
+  }
+  const other = await fetch(BASE + '/storage/v1/object/authenticated/receipts/' + ownerId + '/' + expId, { headers: { Authorization: 'Bearer tok.' + Buffer.from(JSON.stringify({ sub: '00000000-0000-0000-0000-000000000000', exp: Date.now() + 60000 })).toString('base64url') } });
+  check('nobody else can download it', other.status !== 200, String(other.status));
+  await f.evaluate(() => closeExp());
+
   console.log('team: invite an agent');
   await A.goto(BASE + '/#team'); await crmFrame(A);
   await A.fill('#f-invite [name=email]', 'alex@agency.test'); await A.click('#f-invite button[type=submit]');
@@ -197,6 +223,16 @@ const serverState = async (email, key) => (await db.query(
   check('the link works in the browser where the sign-up started', !!(await crmFrame(V)) && (await V.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id)) === mal.user.id);
 
   console.log('deleting an account');
+  const vId = await V.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id);
+  const vf = await crmFrame(V);
+  if (vf) {
+    await vf.evaluate(() => openExp());
+    await vf.setInputFiles('#exp-receipt-file', { name: 'r.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR42mP8z8DwnxEFMBkYAQDfvwf9e7a2OAAAAABJRU5ErkJggg==', 'base64') });
+    await vf.fill('#exp-desc', 'Parking'); await vf.fill('#exp-amount', '12'); await vf.evaluate(() => addExpense());
+    await until(() => vf.evaluate(() => expenses.some((e) => e.receipt && e.receipt.cloud)));
+    await vf.evaluate(() => closeExp());
+  }
+  check('(this account has a receipt online before deleting)', (await (await fetch(BASE + '/__test/receipts')).json()).some((k) => k.startsWith(vId + '/')));
   await V.click('#menu-btn'); await V.click('#menu [data-act=delete-account]');
   check('delete asks for confirmation first', await V.isVisible('#delete-dlg') && await V.isDisabled('#delete-go'));
   await V.fill('#delete-confirm', 'delete');
@@ -204,6 +240,8 @@ const serverState = async (email, key) => (await db.query(
   if (SHOTS) await V.screenshot({ path: SHOTS + '/6-delete.png' });
   await V.click('#delete-go');
   check('after deleting, back to sign-in with a message', !!(await until(() => V.isVisible('#f-signin'))) && /deleted/.test(await V.textContent('#toast')));
+  check('their receipts are deleted too', !(await (await fetch(BASE + '/__test/receipts')).json()).some((k) => k.startsWith(vId + '/')));
+  check('and the receipts kept in that browser are cleared', await V.evaluate(() => new Promise((ok) => { const r = indexedDB.open('crm_receipts'); r.onsuccess = () => { const has = r.result.objectStoreNames.contains('files'); r.result.close(); ok(!has); }; r.onerror = () => ok(true); })));
   check('the account is gone from the database', !(await db.query("select 1 from auth.users where email = 'mallory@else.test'")).rows.length);
   check('nothing of it is left on the device', (await V.evaluate(() => Object.keys(localStorage).filter((k) => /^crm_|^shell_(session|owner)$/.test(k)).length)) === 0);
   await A.goto(BASE + '/'); await crmFrame(A);

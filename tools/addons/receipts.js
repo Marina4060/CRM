@@ -3,9 +3,11 @@
    offered) or attaches a file such as a PDF invoice. Rows with a receipt show
    🧾 to view it; rows without show 📎 to add one later.
 
-   Receipts are kept in this browser's file storage (IndexedDB), which has
-   room for hundreds of them, not in the synced CRM data. Photos are shrunk
-   to at most 1600 px. Built in by tools/add_addons.py. */
+   Photos are shrunk to at most 1600 px. Each receipt is kept in this
+   browser's file storage (IndexedDB) for speed and, in the online version,
+   uploaded to the private receipts store, so it opens on every device and
+   is backed up. A receipt saved while offline uploads later.
+   Built in by tools/add_addons.py. */
 (function(){
   if(typeof addExpense !== 'function' || typeof renderExp !== 'function') return;
   var DB = 'crm_receipts', STORE = 'files', MAX = 1600, pending = null, attachTo = null;
@@ -24,6 +26,19 @@
   function get(id){ return tx('readonly', function(s){ return s.get(id); }); }
   function del(id){ return tx('readwrite', function(s){ s.delete(id); }); }
   function save(){ try { localStorage.setItem('crm_expenses', JSON.stringify(expenses)); } catch (e) {} }
+  // the online store, when the CRM runs inside the online app
+  function cloud(){ try { return window.CRM_UID && window.parent !== window && window.parent.CRM_RECEIPTS ? window.parent.CRM_RECEIPTS : null; } catch (e) { return null; } }
+  function upload(exp, blob){
+    var c = cloud(); if(!c || !exp.receipt) return Promise.resolve(false);
+    return c.upload(window.CRM_UID, exp.id, blob).then(function(){ exp.receipt.cloud = true; save(); return true; }, function(){ return false; });
+  }
+  // receipts saved before signing in or while offline go up when they can
+  function catchUp(){
+    if(!cloud()) return;
+    expenses.filter(function(e){ return e.receipt && !e.receipt.cloud; }).forEach(function(e){
+      get(e.id).then(function(rec){ if(rec) return upload(e, rec.blob).then(function(ok){ if(ok) try { renderExp(); } catch (x) {} }); }).catch(function(){});
+    });
+  }
 
   // photos are shrunk; PDFs and other files are kept as they are
   function shrink(file){
@@ -46,6 +61,7 @@
       if(blob !== file) name = name.replace(/\.[a-z0-9]+$/i, '') + '.jpg';
       return put(exp.id, { blob: blob, name: name, type: blob.type || file.type, added: Date.now() }).then(function(){
         exp.receipt = { name: name, type: blob.type || file.type, size: blob.size }; save();
+        return upload(exp, blob);
       });
     });
   }
@@ -93,7 +109,7 @@
   window.deleteExpense = function(el){
     var id = el && el.getAttribute && el.getAttribute('data-id');
     var r = _del.apply(this, arguments);
-    if(id && !expenses.some(function(e){ return e.id === id; })) del(id).catch(function(){});
+    if(id && !expenses.some(function(e){ return e.id === id; })){ del(id).catch(function(){}); var c = cloud(); if(c) c.remove(window.CRM_UID, id).catch(function(){}); }
     return r;
   };
 
@@ -113,14 +129,25 @@
     });
     var n = expenses.filter(function(e){ return e.receipt; }).length, note = document.getElementById('exp-receipt-note');
     if(!note){ var tb = document.getElementById('exp-tbody'); var tbl = tb && tb.closest('table'); if(tbl){ note = document.createElement('div'); note.id = 'exp-receipt-note'; note.style.cssText = 'font-size:12px;color:var(--t3);margin:6px 2px'; tbl.parentNode.insertBefore(note, tbl.nextSibling); } }
-    if(note) note.textContent = n ? n + ' receipt' + (n === 1 ? '' : 's') + ' saved on this device. Download any you need to keep elsewhere.' : '';
+    var waiting = expenses.filter(function(e){ return e.receipt && !e.receipt.cloud; }).length;
+    if(note) note.textContent = !n ? '' : cloud()
+      ? n + ' receipt' + (n === 1 ? '' : 's') + ' saved online' + (waiting ? ', ' + waiting + ' waiting to upload' : '') + '.'
+      : n + ' receipt' + (n === 1 ? '' : 's') + ' saved on this device. Download any you need to keep elsewhere.';
     return r;
   };
 
   // ── viewing a receipt ──
   function view(e){
     get(e.id).then(function(rec){
-      if(!rec){ alert('This receipt was added on another device. Open it there.'); return; }
+      if(rec) return rec;
+      var c = cloud();
+      if(!c || !e.receipt.cloud) return null;
+      return c.download(window.CRM_UID, e.id).then(function(blob){
+        var r = { blob: blob, name: e.receipt.name, type: blob.type || e.receipt.type, added: Date.now() };
+        return put(e.id, r).then(function(){ return r; }, function(){ return r; });
+      }, function(){ return null; });
+    }).then(function(rec){
+      if(!rec){ alert(e.receipt.cloud ? 'The receipt couldn\u2019t be downloaded. Check your internet connection and try again.' : 'This receipt was added on another device and hasn\u2019t uploaded yet. Open the CRM on that device to send it.'); return; }
       var url = URL.createObjectURL(rec.blob), isImg = /^image\//.test(rec.type);
       var m = document.createElement('div'); m.id = 'rcpt-modal';
       m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
@@ -135,9 +162,18 @@
       m.onclick = function(ev){ if(ev.target === m) close(); };
       m.querySelector('#rcpt-close').onclick = close;
       m.querySelector('#rcpt-replace').onclick = function(){ close(); attachTo = e.id; input.value = ''; input.click(); };
-      m.querySelector('#rcpt-remove').onclick = function(){ if(!confirm('Remove this receipt?')) return; del(e.id).then(function(){ delete e.receipt; save(); close(); renderExp(); }); };
+      m.querySelector('#rcpt-remove').onclick = function(){
+        if(!confirm('Remove this receipt?')) return;
+        var c = cloud(); if(c && e.receipt.cloud) c.remove(window.CRM_UID, e.id).catch(function(){});
+        del(e.id).then(function(){ delete e.receipt; save(); close(); renderExp(); });
+      };
     }).catch(function(){ alert('Receipts can’t be opened in this browser.'); });
   }
+
+  setTimeout(catchUp, 2500);
+  window.addEventListener('online', catchUp);
+  var _open = window.openExp;
+  if(_open) window.openExp = function(){ var r = _open.apply(this, arguments); catchUp(); return r; };
 
   window.__receipts = { get: get, view: function(id){ var e = expenses.filter(function(x){ return x.id === id; })[0]; if(e) view(e); } };
 })();

@@ -359,6 +359,8 @@
     syncKeys().forEach(lsDel);
     pending = []; known = {}; lsDel(S_PENDING); lsDel(S_KNOWN); lsDel(S_LASTOK);
     teamSnap = {}; teamSeen = {}; lsDel(S_TEAMSNAP); lsDel(S_TEAMDIRTY); lsDel(S_MODE);
+    // receipt photos kept on this device for the CRM (their copies online stay)
+    try { if (window.indexedDB) indexedDB.deleteDatabase('crm_receipts'); } catch (e) { }
   }
   // changes made on another device while this one is open
   function checkRemote() {
@@ -661,6 +663,31 @@
         throw e;
       });
   }
+  // ─────────────── receipts: files attached to expenses ───────────────
+  // The CRM calls these to keep receipts in the private receipts bucket, in a
+  // folder named after the user. They refuse unless the account the CRM was
+  // opened for is still the one signed in here.
+  function receiptCall(uid, method, path, blob) {
+    if (!stillMine() || ctx.user.id !== uid) return Promise.reject(new ApiError('Signed out', 401));
+    return ensureFresh().then(function () {
+      var h = { apikey: KEY, Authorization: 'Bearer ' + session.access_token };
+      if (blob) { h['Content-Type'] = blob.type || 'application/octet-stream'; h['x-upsert'] = 'true'; }
+      return fetch(API + '/storage/v1/object/' + path, { method: method, headers: h, body: blob || undefined })
+        .catch(function () { throw new NetError('You appear to be offline.'); });
+    }).then(function (r) {
+      if (!r.ok) throw new ApiError('Receipt storage: ' + r.status, r.status);
+      return r;
+    });
+  }
+  function receiptPath(uid, id) { return uid + '/' + String(id).replace(/[^A-Za-z0-9_-]/g, ''); }
+  window.CRM_RECEIPTS = {
+    upload: function (uid, id, blob) { return receiptCall(uid, 'POST', 'receipts/' + receiptPath(uid, id), blob).then(function () { return true; }); },
+    download: function (uid, id) { return receiptCall(uid, 'GET', 'authenticated/receipts/' + receiptPath(uid, id)).then(function (r) { return r.blob(); }); },
+    remove: function (uid, id) {
+      return receiptCall(uid, 'DELETE', 'receipts/' + receiptPath(uid, id)).then(function () { return true; })
+        .catch(function (e) { if (e && (e.status === 400 || e.status === 404)) return true; throw e; });   // already gone
+    }
+  };
   function loadCrm() {
     return fetchApp().then(function (html) {
       // first time: fill "My details" with what we know from the account
@@ -675,7 +702,7 @@
         'function ok(){try{return JSON.parse(localStorage.getItem("shell_owner"))===o}catch(e){return false}}' +
         'P.setItem=function(k,v){if(ok())return s.call(this,k,v)};P.removeItem=function(k){if(ok())return r.call(this,k)};' +
         'P.clear=function(){if(ok())return c.call(this)}})(' + JSON.stringify(String(ctx.user.id)).replace(/</g, '\\u003c') + ');';
-      f.srcdoc = html.replace(/<head>/i, '<head><script>window.CRM_HOSTED=true;' + guard + '</' + 'script>');
+      f.srcdoc = html.replace(/<head>/i, '<head><script>window.CRM_HOSTED=true;window.CRM_UID=' + JSON.stringify(String(ctx.user.id)).replace(/</g, '\\u003c') + ';' + guard + '</' + 'script>');
       checkVersion();
     }).catch(function (e) {
       $('#tab-crm').innerHTML = '<div class="page"><div class="card"><h2>The CRM could not be loaded</h2><p>' + esc(e.message) + '</p><p><a href="">Try again</a></p></div></div>';

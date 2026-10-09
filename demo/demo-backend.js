@@ -309,6 +309,7 @@
     });
   }
 
+  var DEMO_RECEIPTS = {};
   function json(status, body) { return new Response(body == null ? '' : JSON.stringify(body), { status: status, headers: { 'Content-Type': 'application/json' } }); }
 
   window.fetch = function (input, init) {
@@ -344,6 +345,16 @@
         // storage: only people with access can download the CRM
         var sm = path.match(/^\/storage\/v1\/object\/authenticated\/app\/(.+)$/);
         if (sm) return hasAccess(currentUser.id) ? serveFile(sm[1]) : json(400, { statusCode: '404', error: 'not_found', message: 'Object not found' });
+        // receipts: kept in memory for the demo, each person in their own folder
+        var rc = path.match(/^\/storage\/v1\/object\/(authenticated\/)?receipts\/(.+)$/);
+        if (rc) {
+          var rname = decodeURIComponent(rc[2]);
+          if (rname.split('/')[0] !== currentUser.id) return json(400, { statusCode: '403', error: 'Unauthorized', message: 'new row violates row-level security policy' });
+          if (method === 'POST') { DEMO_RECEIPTS[rname] = init.body; return json(200, { Key: 'receipts/' + rname }); }
+          if (method === 'DELETE') { var had = !!DEMO_RECEIPTS[rname]; delete DEMO_RECEIPTS[rname]; return had ? json(200, {}) : json(400, { statusCode: '404', error: 'not_found', message: 'Object not found' }); }
+          var rb = DEMO_RECEIPTS[rname];
+          return rb ? new Response(rb, { status: 200, headers: { 'Content-Type': rb.type || 'application/octet-stream' } }) : json(400, { statusCode: '404', error: 'not_found', message: 'Object not found' });
+        }
         var fm = path.match(/^\/functions\/v1\/(.+)$/);
         if (fm) { var fr = stripeFn(fm[1], body || {}); save(); return json(200, fr); }
         var rm = path.match(/^\/rest\/v1\/rpc\/(.+)$/);

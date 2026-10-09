@@ -19,3 +19,7 @@ verify_jwt = true
 
 [functions.delete-account]
 verify_jwt = true
+
+# called on a schedule with the service role key, which it checks itself
+[functions.purge-receipts]
+verify_jwt = false

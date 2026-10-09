@@ -138,7 +138,47 @@ async function auth(req, res, url) {
   send(res, 404, { msg: 'not found' });
 }
 
+// receipts: the files are kept in memory, their rows in storage.objects under the real row security
+const RECEIPTS = new Map();
+function readRaw(req) { return new Promise((ok) => { const d = []; req.on('data', (c) => d.push(c)); req.on('end', () => ok(Buffer.concat(d))); }); }
+async function receipts(req, res, url, sub) {
+  const up = url.pathname.match(/^\/storage\/v1\/object\/receipts\/(.+)$/), down = url.pathname.match(/^\/storage\/v1\/object\/authenticated\/receipts\/(.+)$/);
+  const name = decodeURIComponent((up || down)[1]);
+  const notFound = () => send(res, 400, { statusCode: '404', error: 'not_found', message: 'Object not found' });
+  try {
+    if (up && req.method === 'POST') {
+      const body = await readRaw(req);
+      if (body.length > 10485760) return send(res, 413, { statusCode: '413', error: 'Payload too large', message: 'The object exceeded the maximum allowed size' });
+      await asUser(sub, async (c) => {
+        await c.query("delete from storage.objects where bucket_id = 'receipts' and name = $1", [name]);
+        await c.query("insert into storage.objects (bucket_id, name, owner) values ('receipts', $1, $2)", [name, sub]);
+      });
+      RECEIPTS.set(name, { body, type: req.headers['content-type'] || 'application/octet-stream' });
+      return send(res, 200, { Key: 'receipts/' + name });
+    }
+    if (down && req.method === 'GET') {
+      const r = await asUser(sub, (c) => c.query("select count(*)::int n from storage.objects where bucket_id = 'receipts' and name = $1", [name]));
+      const f = RECEIPTS.get(name);
+      if (!r.rows[0].n || !f) return notFound();
+      return send(res, 200, f.body, f.type);
+    }
+    if (up && req.method === 'DELETE') {
+      const r = await asUser(sub, (c) => c.query("delete from storage.objects where bucket_id = 'receipts' and name = $1 returning 1", [name]));
+      if (!r.rowCount) return notFound();
+      RECEIPTS.delete(name);
+      return send(res, 200, { message: 'Successfully deleted' });
+    }
+  } catch (e) { return send(res, 400, { statusCode: '403', error: 'Unauthorized', message: 'new row violates row-level security policy' }); }
+  notFound();
+}
+// as removeReceipts in supabase/functions/_shared: everything in a person's folder
+async function removeReceipts(uid) {
+  await pool.query("delete from storage.objects where bucket_id = 'receipts' and name like $1", [uid + '/%']);
+  for (const k of [...RECEIPTS.keys()]) if (k.startsWith(uid + '/')) RECEIPTS.delete(k);
+}
+
 async function storage(req, res, url, sub) {
+  if (/^\/storage\/v1\/object\/(authenticated\/)?receipts\//.test(url.pathname)) return receipts(req, res, url, sub);
   const m = url.pathname.match(/^\/storage\/v1\/object\/authenticated\/app\/(.+)$/);
   if (!m || !APP_FILES[m[1]]) return send(res, 400, { statusCode: '404', error: 'not_found', message: 'Object not found' });
   const ok = await asUser(sub, (c) => c.query("select count(*)::int n from storage.objects where bucket_id = 'app' and name = $1", [m[1]]));
@@ -156,6 +196,7 @@ async function functions(req, res, url, sub) {
     try {
       const chk = (await pool.query('select public.delete_account($1, true) r', [sub])).rows[0].r;
       if (chk.cancel_subscription) cancelled.push(chk.cancel_subscription);
+      await removeReceipts(sub);
       await pool.query('select public.delete_account($1, false)', [sub]);
       return send(res, 200, { deleted: true });
     } catch (e) { return send(res, 409, { error: e.message }); }
@@ -201,6 +242,7 @@ http.createServer(async (req, res) => {
       res.writeHead(302, { Location: '/?checkout=success#billing' }); return res.end();
     }
     if (url.pathname === '/__test/cancelled') return send(res, 200, cancelled);
+    if (url.pathname === '/__test/receipts') return send(res, 200, [...RECEIPTS.keys()]);
     if (url.pathname === '/__test/portal') return send(res, 200, '<h1>Stripe billing portal (test)</h1>', 'text/html');
     if (url.pathname === '/config.js') {
       return send(res, 200, fs.readFileSync(path.join(WEB, 'config.js'), 'utf8')

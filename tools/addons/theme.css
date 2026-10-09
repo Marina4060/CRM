@@ -18,11 +18,17 @@ body{background:var(--crm-canvas)}
   background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important;
   font-weight:500 !important;border-radius:8px !important;box-shadow:none !important;transform:none !important}
 .topbar .cal-btn-top:hover,.topbar .diary-open-btn:hover,.topbar .ai-btn:hover{background:#F9FAFB !important;border-color:#98A2B3 !important}
-/* icons in plain buttons go grey; the main actions keep the accent */
-.topbar .cal-btn-top:not(.crm-primary),.topbar .diary-open-btn,.topbar .ai-btn{filter:grayscale(1)}
+/* soft colours, one per kind of task (set by theme.js); the main actions keep the accent */
+.topbar .soft-blue{background:#EEF4FB !important;color:#2B4C7E !important;border-color:#D3E2F4 !important}
+.topbar .soft-green{background:#EDF7F1 !important;color:#2F6B4F !important;border-color:#CFE8DA !important}
+.topbar .soft-lilac{background:#F3F1FA !important;color:#5B4B8A !important;border-color:#E0DAF2 !important}
+.topbar .soft-sand{background:#FBF5EA !important;color:#7A5A1E !important;border-color:#EFE0C2 !important}
+.topbar .soft-rose{background:#FBF1F3 !important;color:#8A3B52 !important;border-color:#F0D6DD !important}
+.topbar .soft-grey{background:#F4F5F7 !important;color:#475467 !important;border-color:#E1E4E8 !important}
+.topbar [class*="soft-"]:hover{filter:brightness(.97)}
 .topbar .crm-primary{background:var(--crm-accent) !important;color:#fff !important;border-color:var(--crm-accent) !important;font-weight:600 !important}
 .topbar .crm-primary:hover{filter:brightness(1.1)}
-.topbar .crm-today{background:var(--crm-ink) !important;color:#fff !important;border-color:var(--crm-ink) !important}
+.topbar .crm-today{background:#FFF7E0 !important;color:#7A5A1E !important;border:1px solid #F2DFA8 !important}
 .search{border:1px solid var(--crm-line2) !important;box-shadow:none !important;border-radius:8px !important}
 .search:focus{border-color:var(--crm-accent) !important;box-shadow:0 0 0 3px var(--crm-accent-soft) !important}
 .vtabs{background:#F2F4F7 !important;border:1px solid var(--crm-line) !important}
@@ -35,19 +41,19 @@ body{background:var(--crm-canvas)}
 .sm-val{color:var(--crm-ink) !important;font-weight:600 !important}
 
 /* lanes: white header with a thin stage-coloured line on top */
-.lane-head{background:#fff !important;border:1px solid var(--crm-line);border-bottom:0;border-top:3px solid var(--lane,#98A2B3)}
+.lane-head{background:var(--lane-soft,#fff) !important;border:1px solid var(--crm-line);border-bottom:0;border-top:3px solid var(--lane,#98A2B3)}
 .lane-body{background:#F9FAFB !important;border:1px solid var(--crm-line);border-top:0}
 .lane-title{font-weight:600 !important}
 .lane-badge{background:#F2F4F7 !important;color:#344054 !important}
-.hot-h{--lane:#D92D20}.hot-t{color:#B42318 !important}
-.warm-h{--lane:#DC6803}.warm-t{color:#B54708 !important}
-.pot-h{--lane:#7A8BA3}.pot-t{color:#475467 !important}
-.apr-h{--lane:#7F56D9}.apr-t{color:#6941C6 !important}
-.msg-h{--lane:#2E90FA}.msg-t{color:#175CD3 !important}
-.cold-h{--lane:#98A2B3}.cold-t{color:#475467 !important}
-.dcl-h{--lane:#912018}.dcl-t{color:#912018 !important}
-.list-h{--lane:#12B76A}.list-t{color:#067647 !important}
-.sold-h{--lane:#087443}.sold-t{color:#085D3A !important}
+.hot-h{--lane-soft:#FEF6F5;--lane:#D92D20}.hot-t{color:#B42318 !important}
+.warm-h{--lane-soft:#FFF9EE;--lane:#DC6803}.warm-t{color:#B54708 !important}
+.pot-h{--lane-soft:#F5F7FA;--lane:#7A8BA3}.pot-t{color:#475467 !important}
+.apr-h{--lane-soft:#F7F5FE;--lane:#7F56D9}.apr-t{color:#6941C6 !important}
+.msg-h{--lane-soft:#F2F8FF;--lane:#2E90FA}.msg-t{color:#175CD3 !important}
+.cold-h{--lane-soft:#F6F7F9;--lane:#98A2B3}.cold-t{color:#475467 !important}
+.dcl-h{--lane-soft:#FBF3F2;--lane:#912018}.dcl-t{color:#912018 !important}
+.list-h{--lane-soft:#F0FAF4;--lane:#12B76A}.list-t{color:#067647 !important}
+.sold-h{--lane-soft:#EEF8F2;--lane:#087443}.sold-t{color:#085D3A !important}
 
 /* contact cards */
 .card{border:1px solid var(--crm-line) !important;border-radius:10px !important;box-shadow:0 1px 2px rgba(16,24,40,.04)}

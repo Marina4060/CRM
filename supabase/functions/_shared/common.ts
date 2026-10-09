@@ -105,6 +105,20 @@ export async function customerFor(team: Team, user: User): Promise<string> {
   return c.id;
 }
 
+// delete every receipt in a person's folder of the receipts bucket
+export async function removeReceipts(userId: string): Promise<number> {
+  const bucket = admin.storage.from("receipts");
+  let removed = 0;
+  for (;;) {
+    const { data, error } = await bucket.list(userId, { limit: 1000 });
+    if (error) throw error;
+    if (!data || !data.length) return removed;
+    const { error: e2 } = await bucket.remove(data.map((f) => `${userId}/${f.name}`));
+    if (e2) throw e2;
+    removed += data.length;
+  }
+}
+
 // run a handler with CORS, method check and friendly errors
 export function handle(name: string, fn: (req: Request) => Promise<Response>) {
   Deno.serve(async (req) => {

@@ -31,6 +31,20 @@
     }
   } catch (e) {}
 
+  // soft colours by kind of task: people and contacts, planning, insight, money, files
+  var SOFT = {
+    'soft-blue':  ['openRPImport()', 'crmImportFile()', 'openStreetCampaign()', 'openEmail()', 'openSMS()'],
+    'soft-green': ['openDiary()', 'openCal()', 'openCommand()', 'openStreetCoverage()', 'openSessionLog()', 'openStreetTracker()'],
+    'soft-lilac': ['openPredictive()', 'openSelfAudit()', 'openExtra()', 'openVendorReports()', 'openCompete()', 'toggleAI()'],
+    'soft-sand':  ['openExp()', 'openLog()'],
+    'soft-rose':  ['openBuyers()', 'openInvestors()', 'showMultiOwners()'],
+    'soft-grey':  ['crmBackup()', 'exportCRM()']
+  };
+  function soft(){
+    Object.keys(SOFT).forEach(function(cls){ SOFT[cls].forEach(function(oc){ var el = document.querySelector('.topbar [onclick="' + oc + '"]'); if(el) el.classList.add(cls); }); });
+    var nb = document.getElementById('nearby-btn'); if(nb) nb.classList.add('soft-lilac');
+  }
+  soft(); setTimeout(soft, 0); window.addEventListener('load', soft);   // some buttons are added by later scripts
   // the main actions keep the accent; everything else is a quiet button
   [['openAddContact()', 'crm-primary'], ['openCR()', 'crm-primary'], ['openTodayDash()', 'crm-today']].forEach(function(p){
     var el = document.querySelector('.topbar [onclick="' + p[0] + '"]'); if(el) el.classList.add(p[1]);

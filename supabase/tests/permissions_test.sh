@@ -189,6 +189,23 @@ echo "app download"
 expect "member with access can download the app" "1" "$C" "select count(*) from storage.objects where bucket_id = 'app'"
 expect "no access: can't download the app" "0" "$B" "select count(*) from storage.objects where bucket_id = 'app'"
 
+echo "receipts"
+expect "a person with access adds a receipt to their own folder" "" "$C" "insert into storage.objects (bucket_id, name) values ('receipts', '$C/e1.jpg')"
+expect "…and sees it" "1" "$C" "select count(*) from storage.objects where bucket_id = 'receipts'"
+expect "can't add a receipt to someone else's folder" "row-level security" "$C" "insert into storage.objects (bucket_id, name) values ('receipts', '$A/e1.jpg')"
+expect "can't put a receipt outside any folder" "row-level security" "$C" "insert into storage.objects (bucket_id, name) values ('receipts', 'e2.jpg')"
+expect "others can't see it" "0" "$A" "select count(*) from storage.objects where bucket_id = 'receipts' and name like '$C/%'"
+expect "without access, no new receipts" "row-level security" "$B" "insert into storage.objects (bucket_id, name) values ('receipts', '$B/e1.jpg')"
+"${Q[@]}" -c "insert into storage.objects (bucket_id, name) values ('receipts', '$B/old.jpg')" >/dev/null
+expect "…but their earlier receipts can still be opened" "1" "$B" "select count(*) from storage.objects where bucket_id = 'receipts'"
+expect "can't remove someone else's receipt" "0" "$C" "with d as (delete from storage.objects where bucket_id = 'receipts' and name = '$B/old.jpg' returning 1) select count(*) from d"
+expect "removes their own" "1" "$C" "with d as (delete from storage.objects where bucket_id = 'receipts' and name = '$C/e1.jpg' returning 1) select count(*) from d"
+expect "people can't ask whose receipts get purged" "permission denied" "$C" "select public.receipt_owners_to_purge(90)"
+expect "nobody current is on the purge list" "0" "-" "reset role; select count(*) from public.receipt_owners_to_purge(90) u where u in ('$A', '$C')"
+Z=$(user lapsed@test.au); as "$Z" "select public.app_context()" >/dev/null
+"${Q[@]}" -c "update public.teams set trial_ends_at = now() - interval '200 days' where id = (select team_id from public.team_members where user_id = '$Z')" >/dev/null
+expect "someone whose trial ended 200 days ago is on it" "1" "-" "reset role; select count(*) from public.receipt_owners_to_purge(90) u where u = '$Z'"
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ]

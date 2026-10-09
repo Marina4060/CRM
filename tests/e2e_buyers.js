@@ -133,7 +133,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR
   check(e1 && e1.receipt && /fuel/.test(e1.receipt.name), 'the expense is saved with its receipt', e1);
   const rec = await f.evaluate((id) => __receipts.get(id).then((r) => r ? { type: r.type, size: r.blob.size } : null), e1.id);
   check(rec && rec.size > 0, 'the receipt file is stored on the device', rec);
-  check(/1 receipt saved on this device/.test(await f.textContent('#exp-receipt-note')), 'Expenses says how many receipts are saved');
+  check(/1 receipt saved (online|on this device)/.test(await f.textContent('#exp-receipt-note')), 'Expenses says how many receipts are saved', await f.textContent('#exp-receipt-note'));
   await f.evaluate((id) => document.querySelector('#exp-tbody .exp-del[data-id="' + id + '"]').previousElementSibling.click(), e1.id); await sleep(500);
   check(await f.isVisible('#rcpt-modal') && await f.evaluate(() => { const i = document.querySelector('#rcpt-modal img'); return !!i && i.complete && i.naturalWidth > 0; }), 'tapping 🧾 shows the receipt photo');
   check(await f.evaluate(() => !!document.querySelector('#rcpt-modal a[download]')), 'with a Download link');
@@ -156,7 +156,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR
     plain: getComputedStyle(document.querySelector('.topbar [onclick="openExp()"]')).backgroundColor,
     hot: LANES.find((l) => l.key === 'hot').bar,
   }));
-  check(look.add === 'rgb(31, 58, 95)' && look.plain === 'rgb(255, 255, 255)' && look.hot === '#D92D20', 'main actions use the accent, other buttons are plain, stage colours updated', look);
+  check(look.add === 'rgb(31, 58, 95)' && look.plain === 'rgb(251, 245, 234)' && look.hot === '#D92D20', 'main actions use the accent, other buttons soft colours (Expenses: sand), stage colours updated', look);
 
   check(errs.length === 0, 'no script errors', errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
