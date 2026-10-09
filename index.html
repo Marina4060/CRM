@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src https://nominatim.openstreetmap.org 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com https://api.anthropic.com data: sms: tel: mailto:; img-src 'self' data: https:; form-action 'self' sms: tel: mailto:; frame-src 'self' about: blob: data: file:; child-src 'self' about: blob: data: file:;">
+<meta http-equiv="Content-Security-Policy" content="default-src https://nominatim.openstreetmap.org 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com https://api.anthropic.com data: sms: tel: mailto:; img-src blob: 'self' data: https:; form-action 'self' sms: tel: mailto:; frame-src 'self' about: blob: data: file:; child-src 'self' about: blob: data: file:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Real Estate CRM</title>
 <script>
@@ -11498,6 +11498,75 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		}
 	}
 
+/* ══ Professional colours ══
+   One accent colour (the agent's brand colour from My details, navy by
+   default) for the main actions, quiet neutral buttons for everything else,
+   and a calmer set of stage colours. Many buttons carry their colours in a
+   style="" attribute, so these rules need !important. */
+:root{
+  --crm-accent:#1F3A5F; --crm-accent-soft:#EAF0F7;
+  --crm-ink:#101828; --crm-ink2:#475467; --crm-ink3:#98A2B3;
+  --crm-line:#E4E7EC; --crm-line2:#D0D5DD; --crm-canvas:#F5F7FA;
+  --bg3:#F5F7FA; --t1:#101828; --t2:#475467; --t3:#667085;
+}
+body{background:var(--crm-canvas)}
+
+/* top bar */
+.topbar{background:#fff !important;border-bottom:1px solid var(--crm-line) !important;box-shadow:none !important}
+.logo,.logo span{color:var(--crm-ink) !important;text-shadow:none !important}
+.topbar .cal-btn-top,.topbar .diary-open-btn,.topbar .ai-btn{
+  background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important;
+  font-weight:500 !important;border-radius:8px !important;box-shadow:none !important;transform:none !important}
+.topbar .cal-btn-top:hover,.topbar .diary-open-btn:hover,.topbar .ai-btn:hover{background:#F9FAFB !important;border-color:#98A2B3 !important}
+/* icons in plain buttons go grey; the main actions keep the accent */
+.topbar .cal-btn-top:not(.crm-primary),.topbar .diary-open-btn,.topbar .ai-btn{filter:grayscale(1)}
+.topbar .crm-primary{background:var(--crm-accent) !important;color:#fff !important;border-color:var(--crm-accent) !important;font-weight:600 !important}
+.topbar .crm-primary:hover{filter:brightness(1.1)}
+.topbar .crm-today{background:var(--crm-ink) !important;color:#fff !important;border-color:var(--crm-ink) !important}
+.search{border:1px solid var(--crm-line2) !important;box-shadow:none !important;border-radius:8px !important}
+.search:focus{border-color:var(--crm-accent) !important;box-shadow:0 0 0 3px var(--crm-accent-soft) !important}
+.vtabs{background:#F2F4F7 !important;border:1px solid var(--crm-line) !important}
+.vtab{color:var(--crm-ink2) !important}
+.vtab.on{background:#fff !important;color:var(--crm-ink) !important;box-shadow:0 1px 2px rgba(16,24,40,.1)}
+#save-badge{background:#ECFDF3 !important;color:#067647 !important}
+
+/* summary tiles */
+.sm{background:#fff !important;border:1px solid var(--crm-line);border-radius:10px !important}
+.sm-val{color:var(--crm-ink) !important;font-weight:600 !important}
+
+/* lanes: white header with a thin stage-coloured line on top */
+.lane-head{background:#fff !important;border:1px solid var(--crm-line);border-bottom:0;border-top:3px solid var(--lane,#98A2B3)}
+.lane-body{background:#F9FAFB !important;border:1px solid var(--crm-line);border-top:0}
+.lane-title{font-weight:600 !important}
+.lane-badge{background:#F2F4F7 !important;color:#344054 !important}
+.hot-h{--lane:#D92D20}.hot-t{color:#B42318 !important}
+.warm-h{--lane:#DC6803}.warm-t{color:#B54708 !important}
+.pot-h{--lane:#7A8BA3}.pot-t{color:#475467 !important}
+.apr-h{--lane:#7F56D9}.apr-t{color:#6941C6 !important}
+.msg-h{--lane:#2E90FA}.msg-t{color:#175CD3 !important}
+.cold-h{--lane:#98A2B3}.cold-t{color:#475467 !important}
+.dcl-h{--lane:#912018}.dcl-t{color:#912018 !important}
+.list-h{--lane:#12B76A}.list-t{color:#067647 !important}
+.sold-h{--lane:#087443}.sold-t{color:#085D3A !important}
+
+/* contact cards */
+.card{border:1px solid var(--crm-line) !important;border-radius:10px !important;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.card:hover{border-color:var(--crm-accent) !important}
+.card-name{color:var(--crm-ink);font-weight:600 !important}
+.card-top > span{background:#F2F4F7 !important;color:#344054 !important;font-weight:600 !important}
+.copy-nm{background:#F2F4F7 !important;color:#475467 !important;border-color:var(--crm-line2) !important}
+
+/* pop-up windows */
+.feat-head,.exp-head{background:#fff !important;border-bottom:1px solid var(--crm-line) !important}
+.feat-title,.exp-title{color:var(--crm-ink) !important}
+.feat-head [style*="color"],.exp-head [style*="color"]{color:var(--crm-ink2) !important}
+.feat-close,.exp-close{color:var(--crm-ink2) !important}
+.feat-add,.exp-add-btn,.cr-start-btn,.cr-save-next{background:var(--crm-accent) !important;color:#fff !important;border-color:var(--crm-accent) !important}
+.feat-print,.exp-print-btn{background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important}
+.feat-tab.on{color:var(--crm-ink) !important}
+.cr-progress-bar{background:var(--crm-accent) !important}
+.cr-note-prev{background:#F9FAFB !important;border:1px solid var(--crm-line)}
+
 /* ══ iPhone fit ══
    Safari on iPhone widens the whole page to fit anything drawn past the edge
    of the screen, even a closed panel parked off to the side. Then the CRM only
@@ -11529,6 +11598,48 @@ html,body{max-width:100%;overflow-x:hidden}
 </script>
 <script>
 window.CRM_LEAFLET = L.noConflict();
+</script>
+<script>
+/* ══ Professional colours: the parts set in code ══
+   The stage colours used by the board, table, badges and map pins, the
+   accent taken from the agent's brand colour, and which top-bar buttons are
+   the main actions. Runs before the map, so its pins use these colours.
+   Built in by tools/add_addons.py; the rest is in theme.css. */
+(function(){
+  var STAGE = {
+    hot:       ['#D92D20', '#FEF3F2', '#B42318'],
+    warm:      ['#DC6803', '#FFFAEB', '#B54708'],
+    potential: ['#7A8BA3', '#F2F4F7', '#475467'],
+    appraisal: ['#7F56D9', '#F4F3FF', '#6941C6'],
+    msg:       ['#2E90FA', '#EFF8FF', '#175CD3'],
+    cold:      ['#98A2B3', '#F2F4F7', '#475467'],
+    declined:  ['#912018', '#FEF3F2', '#912018'],
+    listed:    ['#12B76A', '#ECFDF3', '#067647'],
+    sold:      ['#087443', '#E3F6EC', '#085D3A']
+  };
+  try { LANES.forEach(function(l){ var s = STAGE[l.key]; if(s) l.bar = s[0]; }); } catch (e) {}
+  try { Object.keys(STAGE).forEach(function(k){ if(SB[k]){ SB[k].bg = STAGE[k][1]; SB[k].cl = STAGE[k][2]; } }); } catch (e) {}
+
+  // the accent: the brand colour from My details, if it is dark enough for white text on it
+  try {
+    var b = window.ME && ME.brand, m = /^#([0-9a-f]{6})$/i.exec(b || '');
+    if(m && b.toUpperCase() !== '#185FA5'){
+      var n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, bl = n & 255;
+      var lum = (0.2126 * r + 0.7152 * g + 0.0722 * bl) / 255;
+      if(lum < 0.55){
+        document.documentElement.style.setProperty('--crm-accent', b);
+        document.documentElement.style.setProperty('--crm-accent-soft', 'rgba(' + r + ',' + g + ',' + bl + ',.12)');
+      }
+    }
+  } catch (e) {}
+
+  // the main actions keep the accent; everything else is a quiet button
+  [['openAddContact()', 'crm-primary'], ['openCR()', 'crm-primary'], ['openTodayDash()', 'crm-today']].forEach(function(p){
+    var el = document.querySelector('.topbar [onclick="' + p[0] + '"]'); if(el) el.classList.add(p[1]);
+  });
+  try { if(typeof renderCurrent === 'function') renderCurrent(); } catch (e) {}
+})();
+
 </script>
 <script>
 /* ══ MAP VIEW: contacts as pins on a street map, coloured by funnel stage ══
@@ -12056,7 +12167,9 @@ window.CRM_LEAFLET = L.noConflict();
       + '<label class="vr-f">Enquiries<input data-w="enq" inputmode="numeric" value="' + h(w.enq || '') + '" placeholder="e.g. 6"></label>'
       + '<label class="vr-f">Private inspections<input data-w="insp" inputmode="numeric" value="' + h(w.insp || '') + '" placeholder="e.g. 2"></label></div>'
       + '<div class="vr-row" style="border-top:0;margin-top:6px"><b>Open homes this week:</b> ' + (S.opens.length ? S.opens.map(function(o){ return h(short(o.date)) + ' (' + o.n + ' group' + (o.n === 1 ? '' : 's') + ')'; }).join(', ') : '<span class="vr-sub">none recorded in the Open Home Register for this address</span>')
-      + ' <button class="vr-btn" style="margin-left:auto" onclick="vrOpenRegister()">+ Add open home visitors</button></div></div>'
+      + ' <button class="vr-btn" style="margin-left:auto" onclick="vrOpenRegister()">+ Add open home visitors</button></div>'
+      + (window.__buyers ? (function(){ var n = window.__buyers.forProperty(L.addr); return '<div class="vr-row"><b>Buyers for this property:</b> ' + n.all + ' tagged, ' + n.qualified + ' qualified <span class="vr-sub">(for you only, not in the report)</span><button class="vr-btn" style="margin-left:auto" onclick="vrBuyers()">View buyers</button></div>'; })() : '')
+      + '</div>'
       + '<div class="vr-sec"><h3>Buyer feedback <span class="vr-sub" style="font-weight:400">The buyer’s name is for you only; the vendor sees the comment and price.</span></h3>'
       + '<div class="vr-grid">'
       + '<label class="vr-f">Date<input type="date" id="vr-fb-date" value="' + h(weekEnd > today() ? today() : weekEnd) + '"></label>'
@@ -12113,6 +12226,7 @@ window.CRM_LEAFLET = L.noConflict();
     if(!confirm('Delete the report for ' + (cur.addr || 'this listing') + '? Its weekly figures and feedback will be removed. The open home register is not changed.')) return;
     DB.list = DB.list.filter(function(L){ return L !== cur; }); save(); mode = 'list'; cur = null; draw();
   };
+  window.vrBuyers = function(){ if(typeof openBuyers === 'function') openBuyers({ prop: cur.addr, tab: 'all' }); };
   window.vrOpenRegister = function(){
     window.closeVendorReports();
     try { openExtra(); setExtraTab('openhouse', [].filter.call(document.querySelectorAll('#extra-wrap .feat-tab'), function(b){ return /Open Home/.test(b.textContent); })[0]); } catch (e) {}
@@ -12168,6 +12282,502 @@ window.CRM_LEAFLET = L.noConflict();
 
   // for tests and the AI assistant
   window.__vendorReports = { stats: function(L, we){ var o = weekEnd; weekEnd = we || weekEnd; var s = stats(L); weekEnd = o; return s; }, prices: prices, sameAddr: sameAddr, db: function(){ return DB; } };
+})();
+
+</script>
+<script>
+/* ══ BUYERS: who is ready to buy, and for which property ══
+   Replaces the old Buyer Register window; works on the same buyer list
+   (crm_buyers_v1), so everything else that reads buyers keeps working.
+
+   Each buyer is checked against what makes a buyer qualified: contact
+   details, a budget, finance (pre-approved or cash), buying within three
+   months, and not needing to sell first. Every note added is read for those
+   facts ("pre-approved", "need to sell first", "budget $750k", an address)
+   and the buyer is evaluated again. Buyers can be tagged to properties.
+   Built in by tools/add_addons.py. */
+(function(){
+  if(typeof buyers === 'undefined' || typeof saveBuyers !== 'function') return;
+
+  var FIN = ['', 'Pre-approved', 'Cash buyer', 'Seeing a broker', 'Not started'];
+  var TIME = ['', 'Ready now', 'Within 3 months', '3–6 months', '6+ months or just looking'];
+  var SELL = ['', 'Nothing to sell', 'Sold or under contract', 'Listed for sale', 'Needs to sell, not listed'];
+  var TYPES = ['Any', 'House', 'Unit or apartment', 'Townhouse', 'Land', 'Acreage'];
+  var STATUS = ['Active', 'Under Offer', 'Purchased', 'Paused'];
+  var tab = 'qualified', prop = '', q = '', openId = null, flash = {};
+
+  // ── helpers ──
+  function h(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function pad(n){ return String(n).padStart(2, '0'); }
+  function now(){ return (typeof perthNow === 'function') ? perthNow() : new Date(); }
+  function iso(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function today(){ return iso(now()); }
+  function ddmmyy(s){ var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1].slice(2) : ''; }
+  function nice(s){ var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], m[2] - 1, +m[3]).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : ''; }
+  function digits(p){ return String(p || '').replace(/[^0-9]/g, '').slice(-9); }
+  function hasPh(b){ return digits(b.ph).length >= 8; }
+  function hasEm(b){ return /\S+@\S+\.\S+/.test(b.em || ''); }
+  function money(n){ return '$' + Math.round(n).toLocaleString('en-AU'); }
+  function budgetNum(v){
+    var s = String(v || '').toLowerCase().replace(/[, $]/g, ''); var m = /(\d+(?:\.\d+)?)(k|m)?/.exec(s); if(!m) return 0;
+    var n = parseFloat(m[1]); if(m[2] === 'm') n *= 1e6; else if(m[2] === 'k') n *= 1e3; else if(n < 10) n *= 1e6; else if(n < 10000) n *= 1e3;
+    return n;
+  }
+  var ST = { street: 'st', road: 'rd', avenue: 'ave', drive: 'dr', court: 'ct', place: 'pl', crescent: 'cres', lane: 'ln', parade: 'pde', terrace: 'tce', close: 'cl', boulevard: 'blvd', circuit: 'cct', grove: 'gr', highway: 'hwy', way: 'way' };
+  function addrKey(a){ return String(a || '').toLowerCase().split(',')[0].replace(/[^a-z0-9\/ ]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').map(function(w){ return ST[w] || w; }).join(' '); }
+  function sameAddr(a, b){ var x = addrKey(a), y = addrKey(b); return !!x && !!y && (x === y || x.indexOf(y + ' ') === 0 || y.indexOf(x + ' ') === 0); }
+
+  // every buyer gets an id and the newer fields; older notes stay as they were
+  function tidy(b){
+    if(!b.id) b.id = 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    if(!Array.isArray(b.tags)) b.tags = b.property && b.property !== 'General enquiries' ? [b.property] : [];
+    if(!Array.isArray(b.log)) b.log = [];
+    b.status = b.status || 'Active'; b.type = b.type || 'Any'; b.beds = b.beds || 'Any';
+    return b;
+  }
+  buyers.forEach(tidy);
+  function byId(id){ return buyers.filter(function(b){ return b.id === id; })[0]; }
+  function save(){ buyers.forEach(function(b){ b.property = b.tags[0] || ''; }); saveBuyers(); }
+
+  // ── the properties a buyer can be tagged to ──
+  function properties(){
+    var out = [], seen = {};
+    function add(a, src){ a = String(a || '').trim(); var k = addrKey(a); if(!k || seen[k]) return; seen[k] = 1; out.push({ a: a, src: src }); }
+    data.forEach(function(c){ if(c.stage === 'listed' && c.a) add(c.a, 'listed'); });
+    try { (window.__vendorReports ? window.__vendorReports.db().list : []).forEach(function(L){ if(!L.done) add(L.addr, 'report'); }); } catch (e) {}
+    (typeof openHomes !== 'undefined' ? openHomes : []).forEach(function(o){ add(o.prop, 'open home'); });
+    buyers.forEach(function(b){ b.tags.forEach(function(t){ add(t, 'tag'); }); });
+    return out;
+  }
+
+  // ── reading a note for the facts that qualify a buyer ──
+  function learn(b, text){
+    var t = ' ' + String(text || '').toLowerCase() + ' ', got = [];
+    function set(f, v, label){ if(b[f] !== v){ b[f] = v; got.push(label + ': ' + v); } }
+    if(/pre-?approv|finance (is )?approved|approval in place|unconditional approval|got (their|his|her|the) approval/.test(t)) set('finance', 'Pre-approved', 'Finance');
+    else if(/cash buyer|paying cash|no finance (needed|required)|\bcash\b.*\b(purchase|buy)/.test(t)) set('finance', 'Cash buyer', 'Finance');
+    else if(/broker|bank appointment|applying for (a )?(loan|finance)|getting (pre-?)?approval|seeing the bank/.test(t)) set('finance', 'Seeing a broker', 'Finance');
+    else if(/no finance yet|haven'?t (got|spoken to) (a )?(broker|bank|finance)|not (yet )?approved/.test(t)) set('finance', 'Not started', 'Finance');
+    if(/(house|home|place|property) (is |has )?(sold|under contract|unconditional)|already sold|settled (their|our|his|her) (house|home)/.test(t)) set('sellFirst', 'Sold or under contract', 'Selling');
+    else if(/(house|home|place|property) (is )?(listed|on the market|for sale)|currently selling/.test(t)) set('sellFirst', 'Listed for sale', 'Selling');
+    else if(/need(s)? to sell|selling first|sell (their|our|my|his|her) (home|house|place) first|subject to (the )?sale/.test(t)) set('sellFirst', 'Needs to sell, not listed', 'Selling');
+    else if(/first home buyer|nothing to sell|renting|investor/.test(t)) set('sellFirst', 'Nothing to sell', 'Selling');
+    if(/ready (to buy|now)|asap|urgent|straight away|this month|ready to go/.test(t)) set('timeframe', 'Ready now', 'Timeframe');
+    else if(/(next|within|in) (1|2|3|one|two|three|a couple of) (months?|weeks)|before christmas|this quarter/.test(t)) set('timeframe', 'Within 3 months', 'Timeframe');
+    else if(/(next|within|in) (4|5|6|four|five|six) months/.test(t)) set('timeframe', '3–6 months', 'Timeframe');
+    else if(/just looking|no rush|not in a hurry|next year|(12|twelve) months|6\+? months/.test(t)) set('timeframe', '6+ months or just looking', 'Timeframe');
+    var bm = /(budget|up to|max(imum)?|spend|around|approved (for|to))\s*(is|of|about|around)?\s*\$?\s*(\d[\d,.]*\s*(k|m|mil|million)?)\b/.exec(t);
+    if(bm){ var n = budgetNum(bm[5].replace(/mil(lion)?/, 'm')); if(n >= 100000 && String(Math.round(n)) !== String(budgetNum(b.budget) || '')){ b.budget = String(Math.round(n)); got.push('Budget: ' + money(n)); } }
+    var bd = /(\d)\s*(\+\s*)?(bed|br\b|bedroom)/.exec(t); if(bd && b.beds !== (bd[1] >= 5 ? '5+' : bd[1])){ b.beds = bd[1] >= 5 ? '5+' : bd[1]; got.push('Beds: ' + b.beds); }
+    var em = /[\w.+-]+@[\w-]+\.[\w.]+/.exec(text || ''); if(em && !hasEm(b)){ b.em = em[0]; got.push('Email: ' + em[0]); }
+    var ph = /(\+?61\s?|0)4[\d\s]{8,11}/.exec(text || ''); if(ph && !hasPh(b)){ b.ph = ph[0].trim(); got.push('Mobile: ' + b.ph); }
+    properties().forEach(function(p){
+      var k = addrKey(p.a); if(k && t.indexOf(k) >= 0 && !b.tags.some(function(x){ return sameAddr(x, p.a); })){ b.tags.push(p.a); got.push('Tagged: ' + p.a); }
+    });
+    if(/make an offer|put in an offer|offer of|second inspection|2nd inspection|wants to (view|inspect)|very keen|loved it/.test(t) && !b.keen){ b.keen = true; got.push('Keen buyer'); }
+    if(/(bought|purchased) (elsewhere|another|a place)|no longer looking|not interested/.test(t) && b.status === 'Active'){ b.status = /bought|purchased/.test(t) ? 'Purchased' : 'Paused'; got.push('Status: ' + b.status); }
+    return got;
+  }
+
+  // ── is this buyer qualified? ──
+  function evaluate(b){
+    var c = [], score = 0;
+    var contact = hasPh(b) || hasEm(b), budget = budgetNum(b.budget) > 0;
+    var finOk = b.finance === 'Pre-approved' || b.finance === 'Cash buyer', finPart = b.finance === 'Seeing a broker';
+    var timeOk = b.timeframe === 'Ready now' || b.timeframe === 'Within 3 months', timePart = b.timeframe === '3–6 months';
+    var sellOk = b.sellFirst === 'Nothing to sell' || b.sellFirst === 'Sold or under contract', sellPart = b.sellFirst === 'Listed for sale', sellBad = b.sellFirst === 'Needs to sell, not listed';
+    var last = (b.log[0] && b.log[0].d) || '', recent = last && (now() - new Date(last)) / 864e5 <= 30;
+    c.push({ ok: contact, t: contact ? 'Contact details' : 'No phone or email' }); if(contact) score += 15;
+    c.push({ ok: budget, t: budget ? 'Budget ' + money(budgetNum(b.budget)) : 'Budget not known' }); if(budget) score += 15;
+    c.push({ ok: finOk, part: finPart, t: finOk ? b.finance : finPart ? 'Seeing a broker' : b.finance === 'Not started' ? 'No finance yet' : 'Finance not known' }); score += finOk ? 30 : finPart ? 12 : 0;
+    c.push({ ok: timeOk, part: timePart, t: timeOk ? b.timeframe : b.timeframe ? 'Buying in ' + b.timeframe.replace('6+ months or just looking', '6+ months') : 'Timeframe not known' }); score += timeOk ? 20 : timePart ? 8 : 0;
+    c.push({ ok: sellOk, part: sellPart, t: sellOk ? b.sellFirst : sellPart ? 'Own home listed' : sellBad ? 'Needs to sell first' : 'Selling not known' }); score += sellOk ? 10 : sellPart ? 5 : 0;
+    if(recent){ score += 10; c.push({ ok: true, t: 'Spoke ' + nice(last) }); }
+    if(b.keen) c.push({ ok: true, t: 'Keen' });
+    var qualified = contact && budget && finOk && timeOk && !sellBad;
+    return { score: Math.min(100, score), qualified: qualified, checks: c, active: b.status === 'Active' || b.status === 'Under Offer' };
+  }
+
+  function addNote(b, text){
+    text = String(text || '').trim(); if(!text) return [];
+    var got = learn(b, text);
+    b.log.unshift({ d: today(), t: text, got: got });
+    b.note = ddmmyy(today()) + ': ' + text + (b.note ? '\n' + b.note : '');
+    b.lastContact = ddmmyy(today());
+    return got;
+  }
+
+  // ── open home visitors who aren't buyers yet ──
+  function visitorsNotBuyers(){
+    var out = [], seen = {};
+    (typeof openHomes !== 'undefined' ? openHomes : []).forEach(function(o, i){
+      if(!o.name) return;
+      var k = digits(o.ph) || o.name.toLowerCase().trim(); if(seen[k]) return; seen[k] = 1;
+      var known = buyers.some(function(b){ return (digits(o.ph) && digits(b.ph) === digits(o.ph)) || (b.name || '').toLowerCase().trim() === o.name.toLowerCase().trim(); });
+      if(!known) out.push({ o: o, i: i });
+    });
+    return out;
+  }
+  function addVisitor(o){
+    var b = tidy({ name: o.name, ph: o.ph || '', em: o.em || '', type: 'Any', beds: 'Any', budget: '', status: 'Active', note: '', tags: o.prop ? [o.prop] : [], log: [] });
+    buyers.push(b);
+    addNote(b, 'Open home at ' + (o.prop || 'a property') + (o.date ? ' on ' + nice(o.date) : '') + ': ' + (o.interest || '') + ' interest.' + (o.note ? ' ' + o.note : ''));
+    if(/high/i.test(o.interest || '')) b.keen = true;
+    return b;
+  }
+
+  // ── the window ──
+  var css = document.createElement('style');
+  css.textContent = ''
+    + '#by-wrap{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:600;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:16px 10px}'
+    + '#by-box{background:var(--bg1);border-radius:14px;width:980px;max-width:100%;box-shadow:0 12px 40px rgba(15,23,42,.25);margin:auto 0}'
+    + '#by-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bd3);flex-wrap:wrap}'
+    + '#by-head h2{font-size:17px;margin:0}'
+    + '#by-body{padding:14px 18px 18px}'
+    + '.by-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--bd2);background:var(--bg1);font:500 13px var(--font);cursor:pointer;color:var(--t1);white-space:nowrap}'
+    + '.by-btn.go{background:var(--crm-accent,#1F3A5F);color:#fff;border-color:var(--crm-accent,#1F3A5F)}'
+    + '.by-btn.del{color:#9B2C2C;border-color:#E8C4C4}'
+    + '.by-tabs{display:flex;gap:4px;background:var(--bg2);padding:4px;border-radius:10px;flex-wrap:wrap}'
+    + '.by-tab{border:0;background:transparent;padding:6px 12px;border-radius:7px;font:500 13px var(--font);color:var(--t2);cursor:pointer}'
+    + '.by-tab.on{background:var(--bg1);color:var(--t1);box-shadow:0 1px 2px rgba(0,0,0,.08)}'
+    + '.by-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0}'
+    + '.by-tools select,.by-tools input,.by-f input,.by-f select,.by-f textarea,.by-note textarea{padding:7px 9px;border-radius:8px;border:1px solid var(--bd2);background:var(--bg1);color:var(--t1);font:13px var(--font)}'
+    + '.by-card{border:1px solid var(--bd3);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--bg1)}'
+    + '.by-top{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}'
+    + '.by-name{font-weight:600;font-size:15px}'
+    + '.by-sub{color:var(--t2);font-size:12px}'
+    + '.by-score{min-width:44px;text-align:center;border-radius:10px;padding:4px 6px;font-weight:700;font-size:15px;line-height:1.1}'
+    + '.by-score small{display:block;font-size:10px;font-weight:500;opacity:.8}'
+    + '.by-q{background:#E7F3EC;color:#1E6B45}.by-nq{background:#F6EFE3;color:#8A5A12}.by-arch{background:#EEF0F3;color:#5B6573}'
+    + '.by-checks{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:8px}'
+    + '.by-chk{font-size:12px;padding:2px 8px;border-radius:20px;border:1px solid var(--bd3);color:var(--t2);background:var(--bg2)}'
+    + '.by-chk.ok{color:#1E6B45;background:#EEF7F1;border-color:#CFE5D8}.by-chk.part{color:#8A5A12;background:#FBF5EA;border-color:#EBD9B5}.by-chk.no{color:#9B2C2C;background:#FBF0F0;border-color:#EBCBCB}'
+    + '.by-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;align-items:center}'
+    + '.by-tag{font-size:12px;padding:2px 4px 2px 9px;border-radius:20px;background:#EAF0F7;color:#1F3A5F;display:inline-flex;align-items:center;gap:2px}'
+    + '.by-tag button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:13px;padding:0 4px}'
+    + '.by-note{display:flex;gap:8px;margin-top:10px;align-items:flex-end}'
+    + '.by-note textarea{flex:1;min-height:38px;resize:vertical}'
+    + '.by-got{margin-top:6px;font-size:12px;color:#1E6B45;background:#EEF7F1;border-radius:8px;padding:5px 9px}'
+    + '.by-log{margin-top:8px;border-top:1px solid var(--bd3);padding-top:6px}'
+    + '.by-log div{font-size:13px;padding:4px 0;border-bottom:1px dashed var(--bd3)}'
+    + '.by-log span{color:var(--t3);font-size:12px;margin-right:6px}'
+    + '.by-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:10px}'
+    + '.by-f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--t2)}'
+    + '.by-sec{margin:14px 0 6px;font-size:13px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.04em}'
+    + '.by-sugg{background:#F5F8FC;border:1px solid #D9E3EF;border-radius:12px;padding:10px 14px;margin-bottom:12px}'
+    + '.by-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--bd3);font-size:13px;flex-wrap:wrap}'
+    + '@media (max-width:600px){#by-body{padding:12px}#by-head{padding:12px}.by-grid{grid-template-columns:1fr 1fr}.by-note{flex-direction:column;align-items:stretch}}';
+  document.head.appendChild(css);
+  var wrap = document.createElement('div'); wrap.id = 'by-wrap';
+  wrap.innerHTML = '<div id="by-box"><div id="by-head"></div><div id="by-body"></div></div>';
+  wrap.addEventListener('click', function(e){ if(e.target === wrap) window.closeBuyers(); });
+  document.body.appendChild(wrap);
+
+  window.openBuyers = function(opts){
+    opts = opts || {};
+    if(opts.prop != null) prop = opts.prop;
+    if(opts.tab) tab = opts.tab;
+    wrap.style.display = 'flex'; draw();
+  };
+  window.closeBuyers = function(){ wrap.style.display = 'none'; var old = document.getElementById('buyers-wrap'); if(old) old.style.display = 'none'; };
+
+  function list(){
+    return buyers.map(function(b){ return { b: b, e: evaluate(b) }; }).filter(function(x){
+      if(prop && !x.b.tags.some(function(t){ return sameAddr(t, prop); })) return false;
+      if(q){ var hay = (x.b.name + ' ' + x.b.ph + ' ' + x.b.em + ' ' + x.b.tags.join(' ') + ' ' + (x.b.note || '')).toLowerCase(); if(hay.indexOf(q) < 0) return false; }
+      return true;
+    }).sort(function(a, b){ return b.e.score - a.e.score || (a.b.name || '').localeCompare(b.b.name || ''); });
+  }
+
+  function draw(){
+    var all = list();
+    var groups = { qualified: all.filter(function(x){ return x.e.active && x.e.qualified; }), not: all.filter(function(x){ return x.e.active && !x.e.qualified; }), done: all.filter(function(x){ return !x.e.active; }) };
+    var shown = tab === 'qualified' ? groups.qualified : tab === 'not' ? groups.not : tab === 'done' ? groups.done : all;
+    var props = properties();
+    document.getElementById('by-head').innerHTML = '<h2>👥 Buyers</h2>'
+      + '<span class="by-sub">' + groups.qualified.length + ' qualified · ' + groups.not.length + ' not yet qualified</span>'
+      + '<button class="by-btn" style="margin-left:auto" onclick="closeBuyers()">Close</button>';
+    var sugg = visitorsNotBuyers();
+    document.getElementById('by-body').innerHTML =
+      '<div class="by-tabs">'
+      + [['qualified', 'Qualified', groups.qualified.length], ['not', 'Not qualified', groups.not.length], ['all', 'All', all.length], ['done', 'Purchased or paused', groups.done.length]].map(function(t){
+        return '<button class="by-tab' + (tab === t[0] ? ' on' : '') + '" onclick="byTab(\'' + t[0] + '\')">' + t[1] + ' <b>' + t[2] + '</b></button>';
+      }).join('') + '</div>'
+      + '<div class="by-tools"><select id="by-prop" aria-label="Property"><option value="">All properties</option>' + props.map(function(p){
+        var n = buyers.filter(function(b){ return b.tags.some(function(t){ return sameAddr(t, p.a); }); }).length;
+        return '<option value="' + h(p.a) + '"' + (prop && sameAddr(prop, p.a) ? ' selected' : '') + '>' + h(p.a) + (n ? ' (' + n + ')' : '') + '</option>';
+      }).join('') + '</select>'
+      + '<input id="by-q" type="search" placeholder="Search buyers" value="' + h(q) + '" style="flex:1;min-width:140px">'
+      + '<button class="by-btn go" onclick="byNew()">+ Add buyer</button></div>'
+      + '<div id="by-new"></div>'
+      + (sugg.length ? '<div class="by-sugg"><b>' + sugg.length + ' open home visitor' + (sugg.length === 1 ? '' : 's') + ' not in your buyers yet</b> <button class="by-btn" style="margin-left:6px" onclick="byAddVisitors()">Add all</button>'
+        + sugg.slice(0, 6).map(function(s){ return '<div class="by-row"><b>' + h(s.o.name) + '</b><span class="by-sub">' + h(s.o.prop || '') + (s.o.interest ? ' · ' + h(s.o.interest) + ' interest' : '') + '</span><button class="by-btn" style="margin-left:auto" onclick="byAddVisitor(' + s.i + ')">Add</button></div>'; }).join('') + '</div>' : '')
+      + (tab === 'not' && shown.length ? '<div class="by-sub" style="margin-bottom:8px">A buyer is qualified with contact details, a budget, finance pre-approved (or cash), buying within 3 months, and no home to sell first. Add notes as you learn more and they move across by themselves.</div>' : '')
+      + (shown.length ? shown.map(card).join('') : '<div class="by-sub" style="padding:18px 0;font-size:13px">' + (buyers.length ? 'No buyers here' + (prop ? ' for ' + h(prop) : '') + '.' : 'No buyers yet. Tap <b>+ Add buyer</b>, or add open home visitors from the Open Home Register.') + '</div>');
+    var ps = document.getElementById('by-prop'); ps.onchange = function(){ prop = ps.value; draw(); };
+    var qs = document.getElementById('by-q'); qs.oninput = function(){ q = qs.value.toLowerCase().trim(); var pos = qs.selectionStart; draw(); var n = document.getElementById('by-q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} };
+    [].forEach.call(document.querySelectorAll('#by-body [data-bf]'), function(el){
+      el.onchange = function(){ var b = byId(el.getAttribute('data-id')); if(!b) return; b[el.getAttribute('data-bf')] = el.value; save(); draw(); };
+    });
+  }
+
+  function card(x){
+    var b = x.b, e = x.e, open = openId === b.id;
+    var cls = !e.active ? 'by-arch' : e.qualified ? 'by-q' : 'by-nq';
+    var ph = String(b.ph || '').split('\n')[0];
+    var contact = [ph ? '<a href="tel:' + h(ph.replace(/[^0-9+]/g, '')) + '">' + h(ph) + '</a>' : '', hasEm(b) ? h(b.em) : ''].filter(Boolean).join(' · ');
+    var wants = [budgetNum(b.budget) ? 'up to ' + money(budgetNum(b.budget)) : '', b.beds && b.beds !== 'Any' ? b.beds + ' bed' : '', b.type && b.type !== 'Any' ? b.type.toLowerCase() : ''].filter(Boolean).join(', ');
+    var props = properties().filter(function(p){ return !b.tags.some(function(t){ return sameAddr(t, p.a); }); });
+    var f = flash[b.id]; delete flash[b.id];
+    var opt = function(arr, v){ return arr.map(function(o){ return '<option' + (o === (v || '') ? ' selected' : '') + ' value="' + h(o) + '">' + (o || 'Not known') + '</option>'; }).join(''); };
+    return '<div class="by-card" id="by-' + b.id + '"><div class="by-top">'
+      + '<div class="by-score ' + cls + '">' + e.score + '<small>' + (!e.active ? h(b.status) : e.qualified ? 'Qualified' : 'Not yet') + '</small></div>'
+      + '<div style="flex:1;min-width:180px"><div class="by-name">' + (b.keen ? '🔥 ' : '') + h(b.name) + '</div>'
+      + '<div class="by-sub">' + (contact || 'No phone or email') + (wants ? ' · ' + h(wants) : '') + '</div></div>'
+      + '<button class="by-btn" onclick="byOpen(\'' + b.id + '\')">' + (open ? 'Hide details' : 'Details') + '</button></div>'
+      + '<div class="by-checks">' + e.checks.map(function(c){ return '<span class="by-chk ' + (c.ok ? 'ok' : c.part ? 'part' : 'no') + '">' + (c.ok ? '✓ ' : c.part ? '◐ ' : '✗ ') + h(c.t) + '</span>'; }).join('') + '</div>'
+      + '<div class="by-tags">' + b.tags.map(function(t, i){ return '<span class="by-tag">🏠 ' + h(t) + '<button title="Remove tag" onclick="byUntag(\'' + b.id + '\',' + i + ')">×</button></span>'; }).join('')
+      + '<select onchange="byTag(\'' + b.id + '\',this.value)" style="font:12px var(--font);padding:3px 6px;border-radius:20px;border:1px dashed var(--bd2);background:var(--bg1);color:var(--t2)"><option value="">+ Tag property</option>'
+      + props.map(function(p){ return '<option value="' + h(p.a) + '">' + h(p.a) + '</option>'; }).join('') + '<option value="__other">Another address…</option></select></div>'
+      + '<div class="by-note"><textarea id="by-n-' + b.id + '" placeholder="Add a note: e.g. Pre-approved to $750k, needs to sell first, wants 4 bed"></textarea><button class="by-btn go" onclick="byNote(\'' + b.id + '\')">Add note</button></div>'
+      + (f ? '<div class="by-got">' + (f.length ? 'Updated from this note: ' + h(f.join(' · ')) : 'Note saved.') + '</div>' : '')
+      + (b.log[0] && !open ? '<div class="by-log"><div><span>' + h(nice(b.log[0].d)) + '</span>' + h(b.log[0].t) + '</div></div>' : '')
+      + (open ? '<div class="by-grid">'
+        + '<label class="by-f">Name<input data-bf="name" data-id="' + b.id + '" value="' + h(b.name) + '"></label>'
+        + '<label class="by-f">Mobile<input data-bf="ph" data-id="' + b.id + '" type="tel" value="' + h(b.ph) + '"></label>'
+        + '<label class="by-f">Email<input data-bf="em" data-id="' + b.id + '" type="email" value="' + h(b.em) + '"></label>'
+        + '<label class="by-f">Budget ($)<input data-bf="budget" data-id="' + b.id + '" inputmode="numeric" value="' + h(b.budget) + '"></label>'
+        + '<label class="by-f">Finance<select data-bf="finance" data-id="' + b.id + '">' + opt(FIN, b.finance) + '</select></label>'
+        + '<label class="by-f">Buying<select data-bf="timeframe" data-id="' + b.id + '">' + opt(TIME, b.timeframe) + '</select></label>'
+        + '<label class="by-f">Home to sell<select data-bf="sellFirst" data-id="' + b.id + '">' + opt(SELL, b.sellFirst) + '</select></label>'
+        + '<label class="by-f">Property type<select data-bf="type" data-id="' + b.id + '">' + opt(TYPES, b.type) + '</select></label>'
+        + '<label class="by-f">Beds<select data-bf="beds" data-id="' + b.id + '">' + opt(['Any', '1', '2', '3', '4', '5+'], b.beds) + '</select></label>'
+        + '<label class="by-f">Status<select data-bf="status" data-id="' + b.id + '">' + opt(STATUS, b.status) + '</select></label></div>'
+        + '<div class="by-log">' + (b.log.length ? b.log.map(function(l){ return '<div><span>' + h(nice(l.d)) + '</span>' + h(l.t) + '</div>'; }).join('') : '')
+        + (!b.log.length && b.note ? '<div><span>Earlier</span>' + h(b.note) + '</div>' : '') + (!b.log.length && !b.note ? '<div class="by-sub">No notes yet.</div>' : '') + '</div>'
+        + '<div style="margin-top:10px;text-align:right"><button class="by-btn del" onclick="byDelete(\'' + b.id + '\')">Delete buyer</button></div>' : '')
+      + '</div>';
+  }
+
+  window.byTab = function(t){ tab = t; draw(); };
+  window.byOpen = function(id){ openId = openId === id ? null : id; draw(); var el = document.getElementById('by-' + id); if(el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); };
+  window.byNote = function(id){
+    var b = byId(id), box = document.getElementById('by-n-' + id); if(!b || !box || !box.value.trim()) return;
+    var was = evaluate(b).qualified;
+    flash[id] = addNote(b, box.value); save();
+    var is = evaluate(b).qualified;
+    if(is !== was && evaluate(b).active) flash[id].push(is ? 'Now qualified' : 'No longer qualified');
+    if(is !== was && (tab === 'qualified' || tab === 'not')) tab = is ? 'qualified' : 'not';
+    draw();
+    var el = document.getElementById('by-' + id); if(el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  };
+  window.byTag = function(id, a){
+    var b = byId(id); if(!b || !a) return;
+    if(a === '__other'){ a = prompt('Address to tag this buyer to:', ''); if(!a) { draw(); return; } }
+    if(!b.tags.some(function(t){ return sameAddr(t, a); })) b.tags.push(a.trim());
+    save(); draw();
+  };
+  window.byUntag = function(id, i){ var b = byId(id); if(!b) return; b.tags.splice(i, 1); save(); draw(); };
+  window.byDelete = function(id){
+    var i = buyers.findIndex(function(b){ return b.id === id; }); if(i < 0) return;
+    if(!confirm('Delete ' + (buyers[i].name || 'this buyer') + ' and their notes?')) return;
+    deleteBuyer(i); openId = null; draw();
+  };
+  window.byAddVisitor = function(i){ var o = openHomes[i]; if(!o) return; addVisitor(o); save(); draw(); };
+  window.byAddVisitors = function(){ visitorsNotBuyers().forEach(function(s){ addVisitor(s.o); }); save(); draw(); };
+
+  window.byNew = function(){
+    var el = document.getElementById('by-new');
+    if(el.innerHTML){ el.innerHTML = ''; return; }
+    var props = properties();
+    el.innerHTML = '<div class="by-card" style="background:var(--bg2)"><div class="by-grid" style="margin-top:0">'
+      + '<label class="by-f">Name<input id="byn-name" placeholder="e.g. Sam & Alex Lee"></label>'
+      + '<label class="by-f">Mobile<input id="byn-ph" type="tel" placeholder="0400 000 000"></label>'
+      + '<label class="by-f">Email<input id="byn-em" type="email" placeholder="name@example.com"></label>'
+      + '<label class="by-f">Budget ($)<input id="byn-budget" inputmode="numeric" placeholder="e.g. 750000"></label>'
+      + '<label class="by-f">Finance<select id="byn-fin">' + FIN.map(function(o){ return '<option value="' + o + '">' + (o || 'Not known') + '</option>'; }).join('') + '</select></label>'
+      + '<label class="by-f">Buying<select id="byn-time">' + TIME.map(function(o){ return '<option value="' + o + '">' + (o || 'Not known') + '</option>'; }).join('') + '</select></label>'
+      + '<label class="by-f">Home to sell<select id="byn-sell">' + SELL.map(function(o){ return '<option value="' + o + '">' + (o || 'Not known') + '</option>'; }).join('') + '</select></label>'
+      + '<label class="by-f">Property<select id="byn-prop"><option value="">No property yet</option>' + props.map(function(p){ return '<option' + (prop && sameAddr(prop, p.a) ? ' selected' : '') + ' value="' + h(p.a) + '">' + h(p.a) + '</option>'; }).join('') + '</select></label></div>'
+      + '<label class="by-f" style="margin-top:8px">First note<textarea id="byn-note" placeholder="What they told you" style="min-height:50px"></textarea></label>'
+      + '<div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end"><button class="by-btn" onclick="document.getElementById(\'by-new\').innerHTML=\'\'">Cancel</button><button class="by-btn go" onclick="bySaveNew()">Save buyer</button></div></div>';
+    document.getElementById('byn-name').focus();
+  };
+  window.bySaveNew = function(){
+    var g = function(id){ return document.getElementById(id).value.trim(); };
+    if(!g('byn-name')){ document.getElementById('byn-name').focus(); return; }
+    var b = tidy({ name: g('byn-name'), ph: g('byn-ph'), em: g('byn-em'), budget: String(budgetNum(g('byn-budget')) || ''), finance: g('byn-fin'), timeframe: g('byn-time'), sellFirst: g('byn-sell'),
+      type: 'Any', beds: 'Any', status: 'Active', note: '', tags: g('byn-prop') ? [g('byn-prop')] : [], log: [] });
+    buyers.push(b);
+    if(g('byn-note')) flash[b.id] = addNote(b, g('byn-note'));
+    save(); tab = evaluate(b).qualified ? 'qualified' : 'not'; draw();
+  };
+
+  // for the vendor report, the map and tests
+  window.__buyers = {
+    evaluate: evaluate, learn: learn, addNote: function(b, t){ var r = addNote(tidy(b), t); save(); return r; },
+    forProperty: function(a){ var l = buyers.filter(function(b){ return b.tags.some(function(t){ return sameAddr(t, a); }); }); return { all: l.length, qualified: l.filter(function(b){ var e = evaluate(b); return e.active && e.qualified; }).length }; }
+  };
+})();
+
+</script>
+<script>
+/* ══ MISSING PHONE OR EMAIL: in the Call Runner, not the pipeline ══
+   The pipeline no longer has the "Missing phone or email" button or the
+   "No phone" / "No email" labels on its cards. The Call Runner (the call
+   list) keeps its own "No phone or email" filter, which is where those
+   contacts are worked through.
+   Built in by tools/add_addons.py. */
+(function(){
+  var btn = document.getElementById('missing-btn'); if(btn) btn.remove();
+  try { missingOnly = false; } catch (e) {}
+  if(typeof missingWhat === 'function') window.missingWhat = function(){ return ''; };
+})();
+
+</script>
+<script>
+/* ══ RECEIPTS: a photo or file with each expense ══
+   "Receipt" in the add-expense form takes a photo (on a phone the camera is
+   offered) or attaches a file such as a PDF invoice. Rows with a receipt show
+   🧾 to view it; rows without show 📎 to add one later.
+
+   Receipts are kept in this browser's file storage (IndexedDB), which has
+   room for hundreds of them, not in the synced CRM data. Photos are shrunk
+   to at most 1600 px. Built in by tools/add_addons.py. */
+(function(){
+  if(typeof addExpense !== 'function' || typeof renderExp !== 'function') return;
+  var DB = 'crm_receipts', STORE = 'files', MAX = 1600, pending = null, attachTo = null;
+
+  function h(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function idb(){
+    return new Promise(function(res, rej){
+      if(!window.indexedDB){ rej(new Error('no storage')); return; }
+      var r = indexedDB.open(DB, 1);
+      r.onupgradeneeded = function(){ r.result.createObjectStore(STORE); };
+      r.onsuccess = function(){ res(r.result); }; r.onerror = function(){ rej(r.error); };
+    });
+  }
+  function tx(mode, fn){ return idb().then(function(db){ return new Promise(function(res, rej){ var t = db.transaction(STORE, mode), s = t.objectStore(STORE), out = fn(s); t.oncomplete = function(){ res(out && out.result); }; t.onerror = function(){ rej(t.error); }; }); }); }
+  function put(id, rec){ return tx('readwrite', function(s){ s.put(rec, id); }); }
+  function get(id){ return tx('readonly', function(s){ return s.get(id); }); }
+  function del(id){ return tx('readwrite', function(s){ s.delete(id); }); }
+  function save(){ try { localStorage.setItem('crm_expenses', JSON.stringify(expenses)); } catch (e) {} }
+
+  // photos are shrunk; PDFs and other files are kept as they are
+  function shrink(file){
+    if(!/^image\//.test(file.type) || /gif|svg/.test(file.type)) return Promise.resolve(file);
+    return new Promise(function(res){
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function(){
+        var k = Math.min(1, MAX / Math.max(img.naturalWidth, img.naturalHeight));
+        var c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        c.toBlob(function(b){ res(b && b.size < file.size ? b : file); }, 'image/jpeg', 0.75);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); res(file); };
+      img.src = url;
+    });
+  }
+  function store(exp, file){
+    return shrink(file).then(function(blob){
+      var name = file.name || 'receipt';
+      if(blob !== file) name = name.replace(/\.[a-z0-9]+$/i, '') + '.jpg';
+      return put(exp.id, { blob: blob, name: name, type: blob.type || file.type, added: Date.now() }).then(function(){
+        exp.receipt = { name: name, type: blob.type || file.type, size: blob.size }; save();
+      });
+    });
+  }
+
+  // ── in the add-expense form ──
+  var input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*,application/pdf'; input.id = 'exp-receipt-file'; input.style.display = 'none';
+  document.body.appendChild(input);
+  var addBtn = document.querySelector('#expense-form-row .exp-add-btn');
+  if(addBtn){
+    var g = document.createElement('div'); g.className = 'exp-form-group'; g.id = 'exp-receipt-group';
+    g.innerHTML = '<div class="exp-form-label">Receipt</div><button type="button" class="exp-input" id="exp-receipt-btn" style="cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">📷 Photo or file</button>';
+    addBtn.parentNode.insertBefore(g, addBtn);
+    document.getElementById('exp-receipt-btn').onclick = function(){ attachTo = null; input.value = ''; input.click(); };
+  }
+  function showPending(){
+    var b = document.getElementById('exp-receipt-btn'); if(!b) return;
+    b.textContent = pending ? '✓ ' + (pending.name || 'Receipt') : '📷 Photo or file';
+    b.title = pending ? 'Tap to choose a different receipt' : '';
+    b.style.color = pending ? '#067647' : '';
+  }
+  input.addEventListener('change', function(){
+    var f = input.files && input.files[0]; if(!f) return;
+    if(attachTo){
+      var e = expenses.filter(function(x){ return x.id === attachTo; })[0]; attachTo = null;
+      if(e) store(e, f).then(function(){ renderExp(); }).catch(failed);
+      return;
+    }
+    pending = f; showPending();
+  });
+  function failed(){ alert('The receipt couldn’t be saved on this device. Check there is free space, or try a smaller photo.'); }
+
+  var _add = window.addExpense;
+  window.addExpense = function(){
+    var before = {}; expenses.forEach(function(e){ before[e.id] = 1; });
+    var r = _add.apply(this, arguments);
+    var added = expenses.filter(function(e){ return !before[e.id]; })[0];
+    if(added && pending){
+      var f = pending; pending = null; showPending();
+      store(added, f).then(function(){ renderExp(); }).catch(failed);
+    }
+    return r;
+  };
+  var _del = window.deleteExpense;
+  window.deleteExpense = function(el){
+    var id = el && el.getAttribute && el.getAttribute('data-id');
+    var r = _del.apply(this, arguments);
+    if(id && !expenses.some(function(e){ return e.id === id; })) del(id).catch(function(){});
+    return r;
+  };
+
+  // ── on each row: view the receipt, or add one ──
+  var _render = window.renderExp;
+  window.renderExp = function(){
+    var r = _render.apply(this, arguments);
+    [].forEach.call(document.querySelectorAll('#exp-tbody .exp-del[data-id]'), function(b){
+      var id = b.getAttribute('data-id'), e = expenses.filter(function(x){ return x.id === id; })[0]; if(!e) return;
+      var x = document.createElement('button'); x.type = 'button'; x.className = 'exp-del exp-rcpt';
+      x.style.cssText = 'margin-right:4px;' + (e.receipt ? 'color:#067647;border-color:#ABEFC6' : 'color:var(--t3)');
+      x.textContent = e.receipt ? '🧾' : '📎';
+      x.title = e.receipt ? 'View receipt: ' + e.receipt.name : 'Add a receipt';
+      x.setAttribute('aria-label', x.title);
+      x.onclick = function(){ if(e.receipt) view(e); else { attachTo = e.id; input.value = ''; input.click(); } };
+      b.parentNode.insertBefore(x, b);
+    });
+    var n = expenses.filter(function(e){ return e.receipt; }).length, note = document.getElementById('exp-receipt-note');
+    if(!note){ var tb = document.getElementById('exp-tbody'); var tbl = tb && tb.closest('table'); if(tbl){ note = document.createElement('div'); note.id = 'exp-receipt-note'; note.style.cssText = 'font-size:12px;color:var(--t3);margin:6px 2px'; tbl.parentNode.insertBefore(note, tbl.nextSibling); } }
+    if(note) note.textContent = n ? n + ' receipt' + (n === 1 ? '' : 's') + ' saved on this device. Download any you need to keep elsewhere.' : '';
+    return r;
+  };
+
+  // ── viewing a receipt ──
+  function view(e){
+    get(e.id).then(function(rec){
+      if(!rec){ alert('This receipt was added on another device. Open it there.'); return; }
+      var url = URL.createObjectURL(rec.blob), isImg = /^image\//.test(rec.type);
+      var m = document.createElement('div'); m.id = 'rcpt-modal';
+      m.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:900;display:flex;align-items:center;justify-content:center;padding:14px';
+      m.innerHTML = '<div style="background:var(--bg1);border-radius:14px;max-width:min(720px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden">'
+        + '<div style="display:flex;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--bd3)"><b style="flex:1;font-size:14px">' + h(e.desc || 'Receipt') + ' · $' + (+e.amount || 0).toFixed(2) + '</b>'
+        + '<a class="exp-close-btn" style="text-decoration:none;color:inherit" href="' + url + '" download="' + h(rec.name) + '">Download</a>'
+        + '<button class="exp-close-btn" id="rcpt-replace">Replace</button><button class="exp-close-btn" id="rcpt-remove" style="color:#9B2C2C">Remove</button><button class="exp-close-btn" id="rcpt-close">Close</button></div>'
+        + '<div style="overflow:auto;padding:10px;text-align:center;background:#F2F4F7">' + (isImg ? '<img src="' + url + '" alt="Receipt" style="max-width:100%;height:auto">'
+          : '<div style="padding:30px 10px;font-size:14px">📄 ' + h(rec.name) + '<br><a href="' + url + '" target="_blank" rel="noopener">Open the file</a></div>') + '</div></div>';
+      document.body.appendChild(m);
+      var close = function(){ m.remove(); setTimeout(function(){ URL.revokeObjectURL(url); }, 1000); };
+      m.onclick = function(ev){ if(ev.target === m) close(); };
+      m.querySelector('#rcpt-close').onclick = close;
+      m.querySelector('#rcpt-replace').onclick = function(){ close(); attachTo = e.id; input.value = ''; input.click(); };
+      m.querySelector('#rcpt-remove').onclick = function(){ if(!confirm('Remove this receipt?')) return; del(e.id).then(function(){ delete e.receipt; save(); close(); renderExp(); }); };
+    }).catch(function(){ alert('Receipts can’t be opened in this browser.'); });
+  }
+
+  window.__receipts = { get: get, view: function(id){ var e = expenses.filter(function(x){ return x.id === id; })[0]; if(e) view(e); } };
 })();
 
 </script>

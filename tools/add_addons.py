@@ -3,13 +3,15 @@
 
     python3 tools/add_addons.py index.html
 
-Adds the Map view (tools/addons/map.js, with Leaflet bundled from
-tools/addons/vendor/), Vendor Reports (tools/addons/vendor_report.js) and the
-iPhone fit fixes (tools/addons/iphone.css) just before </body>, between
+Adds the add-on features from tools/addons/ just before </body>, between
 ADDONS markers, so running it again replaces them rather than adding a second
-copy. It also repairs a few markup mistakes in the CRM itself (see FIXES). It also lets the page reach the map's
-address finder in its Content-Security-Policy (map tiles are images, which the
-policy already allows).
+copy: the Map view (map.js, with Leaflet bundled from vendor/), Vendor Reports
+(vendor_report.js), Buyers (buyers.js), the Call Runner's missing-details
+tools (callrunner.js), receipts on expenses (receipts.js), the professional colours (theme.css, theme.js) and the
+iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
+CRM itself (see FIXES), and lets the page reach the map's address finder in
+its Content-Security-Policy (map tiles are images, which the policy already
+allows).
 
 make_blank_crm.py runs this at the end, so a regenerated blank CRM keeps them.
 """
@@ -33,14 +35,18 @@ def block():
         read('vendor', 'leaflet.js'),
         # keep any page variable called L untouched; the map uses CRM_LEAFLET
         'window.CRM_LEAFLET = L.noConflict();',
+        read('theme.js'),
         read('map.js'),
         read('vendor_report.js'),
+        read('buyers.js'),
+        read('callrunner.js'),
+        read('receipts.js'),
         read('fixes.js'),
     ]
     for s in scripts:
         if '</script' in s.lower():
             raise SystemExit('add_addons: a script contains </script>')
-    return (BEGIN + '\n<style>\n' + read('vendor', 'leaflet.css') + '\n' + read('iphone.css') + '\n</style>\n'
+    return (BEGIN + '\n<style>\n' + read('vendor', 'leaflet.css') + '\n' + read('theme.css') + '\n' + read('iphone.css') + '\n</style>\n'
             + ''.join('<script>\n' + s + '\n</script>\n' for s in scripts) + END + '\n')
 
 
@@ -80,6 +86,11 @@ def add_addons(html):
             csp = re.sub(r'((?:^|;)\s*connect-src)', r'\1 ' + GEOCODER, csp, count=1)
         else:
             csp = re.sub(r'((?:^|;)\s*default-src)', r'\1 ' + GEOCODER, csp, count=1)
+        html = html[:m.start(2)] + csp + html[m.end(2):]
+    # receipts are shown from the browser's own file storage (blob: addresses)
+    m = re.search(r'(<meta http-equiv="Content-Security-Policy" content=")([^"]*)(")', html)
+    if m and re.search(r'img-src(?![^;]*blob:)', m.group(2)):
+        csp = re.sub(r'(img-src)', r'\1 blob:', m.group(2), count=1)
         html = html[:m.start(2)] + csp + html[m.end(2):]
     return html
 

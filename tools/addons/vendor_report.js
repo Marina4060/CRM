@@ -241,7 +241,9 @@
       + '<label class="vr-f">Enquiries<input data-w="enq" inputmode="numeric" value="' + h(w.enq || '') + '" placeholder="e.g. 6"></label>'
       + '<label class="vr-f">Private inspections<input data-w="insp" inputmode="numeric" value="' + h(w.insp || '') + '" placeholder="e.g. 2"></label></div>'
       + '<div class="vr-row" style="border-top:0;margin-top:6px"><b>Open homes this week:</b> ' + (S.opens.length ? S.opens.map(function(o){ return h(short(o.date)) + ' (' + o.n + ' group' + (o.n === 1 ? '' : 's') + ')'; }).join(', ') : '<span class="vr-sub">none recorded in the Open Home Register for this address</span>')
-      + ' <button class="vr-btn" style="margin-left:auto" onclick="vrOpenRegister()">+ Add open home visitors</button></div></div>'
+      + ' <button class="vr-btn" style="margin-left:auto" onclick="vrOpenRegister()">+ Add open home visitors</button></div>'
+      + (window.__buyers ? (function(){ var n = window.__buyers.forProperty(L.addr); return '<div class="vr-row"><b>Buyers for this property:</b> ' + n.all + ' tagged, ' + n.qualified + ' qualified <span class="vr-sub">(for you only, not in the report)</span><button class="vr-btn" style="margin-left:auto" onclick="vrBuyers()">View buyers</button></div>'; })() : '')
+      + '</div>'
       + '<div class="vr-sec"><h3>Buyer feedback <span class="vr-sub" style="font-weight:400">The buyer’s name is for you only; the vendor sees the comment and price.</span></h3>'
       + '<div class="vr-grid">'
       + '<label class="vr-f">Date<input type="date" id="vr-fb-date" value="' + h(weekEnd > today() ? today() : weekEnd) + '"></label>'
@@ -298,6 +300,7 @@
     if(!confirm('Delete the report for ' + (cur.addr || 'this listing') + '? Its weekly figures and feedback will be removed. The open home register is not changed.')) return;
     DB.list = DB.list.filter(function(L){ return L !== cur; }); save(); mode = 'list'; cur = null; draw();
   };
+  window.vrBuyers = function(){ if(typeof openBuyers === 'function') openBuyers({ prop: cur.addr, tab: 'all' }); };
   window.vrOpenRegister = function(){
     window.closeVendorReports();
     try { openExtra(); setExtraTab('openhouse', [].filter.call(document.querySelectorAll('#extra-wrap .feat-tab'), function(b){ return /Open Home/.test(b.textContent); })[0]); } catch (e) {}

@@ -1,0 +1,68 @@
+/* ══ Professional colours ══
+   One accent colour (the agent's brand colour from My details, navy by
+   default) for the main actions, quiet neutral buttons for everything else,
+   and a calmer set of stage colours. Many buttons carry their colours in a
+   style="" attribute, so these rules need !important. */
+:root{
+  --crm-accent:#1F3A5F; --crm-accent-soft:#EAF0F7;
+  --crm-ink:#101828; --crm-ink2:#475467; --crm-ink3:#98A2B3;
+  --crm-line:#E4E7EC; --crm-line2:#D0D5DD; --crm-canvas:#F5F7FA;
+  --bg3:#F5F7FA; --t1:#101828; --t2:#475467; --t3:#667085;
+}
+body{background:var(--crm-canvas)}
+
+/* top bar */
+.topbar{background:#fff !important;border-bottom:1px solid var(--crm-line) !important;box-shadow:none !important}
+.logo,.logo span{color:var(--crm-ink) !important;text-shadow:none !important}
+.topbar .cal-btn-top,.topbar .diary-open-btn,.topbar .ai-btn{
+  background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important;
+  font-weight:500 !important;border-radius:8px !important;box-shadow:none !important;transform:none !important}
+.topbar .cal-btn-top:hover,.topbar .diary-open-btn:hover,.topbar .ai-btn:hover{background:#F9FAFB !important;border-color:#98A2B3 !important}
+/* icons in plain buttons go grey; the main actions keep the accent */
+.topbar .cal-btn-top:not(.crm-primary),.topbar .diary-open-btn,.topbar .ai-btn{filter:grayscale(1)}
+.topbar .crm-primary{background:var(--crm-accent) !important;color:#fff !important;border-color:var(--crm-accent) !important;font-weight:600 !important}
+.topbar .crm-primary:hover{filter:brightness(1.1)}
+.topbar .crm-today{background:var(--crm-ink) !important;color:#fff !important;border-color:var(--crm-ink) !important}
+.search{border:1px solid var(--crm-line2) !important;box-shadow:none !important;border-radius:8px !important}
+.search:focus{border-color:var(--crm-accent) !important;box-shadow:0 0 0 3px var(--crm-accent-soft) !important}
+.vtabs{background:#F2F4F7 !important;border:1px solid var(--crm-line) !important}
+.vtab{color:var(--crm-ink2) !important}
+.vtab.on{background:#fff !important;color:var(--crm-ink) !important;box-shadow:0 1px 2px rgba(16,24,40,.1)}
+#save-badge{background:#ECFDF3 !important;color:#067647 !important}
+
+/* summary tiles */
+.sm{background:#fff !important;border:1px solid var(--crm-line);border-radius:10px !important}
+.sm-val{color:var(--crm-ink) !important;font-weight:600 !important}
+
+/* lanes: white header with a thin stage-coloured line on top */
+.lane-head{background:#fff !important;border:1px solid var(--crm-line);border-bottom:0;border-top:3px solid var(--lane,#98A2B3)}
+.lane-body{background:#F9FAFB !important;border:1px solid var(--crm-line);border-top:0}
+.lane-title{font-weight:600 !important}
+.lane-badge{background:#F2F4F7 !important;color:#344054 !important}
+.hot-h{--lane:#D92D20}.hot-t{color:#B42318 !important}
+.warm-h{--lane:#DC6803}.warm-t{color:#B54708 !important}
+.pot-h{--lane:#7A8BA3}.pot-t{color:#475467 !important}
+.apr-h{--lane:#7F56D9}.apr-t{color:#6941C6 !important}
+.msg-h{--lane:#2E90FA}.msg-t{color:#175CD3 !important}
+.cold-h{--lane:#98A2B3}.cold-t{color:#475467 !important}
+.dcl-h{--lane:#912018}.dcl-t{color:#912018 !important}
+.list-h{--lane:#12B76A}.list-t{color:#067647 !important}
+.sold-h{--lane:#087443}.sold-t{color:#085D3A !important}
+
+/* contact cards */
+.card{border:1px solid var(--crm-line) !important;border-radius:10px !important;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.card:hover{border-color:var(--crm-accent) !important}
+.card-name{color:var(--crm-ink);font-weight:600 !important}
+.card-top > span{background:#F2F4F7 !important;color:#344054 !important;font-weight:600 !important}
+.copy-nm{background:#F2F4F7 !important;color:#475467 !important;border-color:var(--crm-line2) !important}
+
+/* pop-up windows */
+.feat-head,.exp-head{background:#fff !important;border-bottom:1px solid var(--crm-line) !important}
+.feat-title,.exp-title{color:var(--crm-ink) !important}
+.feat-head [style*="color"],.exp-head [style*="color"]{color:var(--crm-ink2) !important}
+.feat-close,.exp-close{color:var(--crm-ink2) !important}
+.feat-add,.exp-add-btn,.cr-start-btn,.cr-save-next{background:var(--crm-accent) !important;color:#fff !important;border-color:var(--crm-accent) !important}
+.feat-print,.exp-print-btn{background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important}
+.feat-tab.on{color:var(--crm-ink) !important}
+.cr-progress-bar{background:var(--crm-accent) !important}
+.cr-note-prev{background:#F9FAFB !important;border:1px solid var(--crm-line)}

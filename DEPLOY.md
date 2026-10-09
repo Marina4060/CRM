@@ -150,7 +150,7 @@ PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_agency.js http://localhost:8787
 kill $MOCK
 
-# the clickable demo: a new user's whole journey (37 checks), every CRM feature opened (38),
+# the clickable demo: a new user's whole journey (37 checks), every CRM feature opened (37),
 # and the Map view and Vendor Reports (43; the map's address finder and tiles are stand-ins, so it runs offline)
 python3 tools/make_demo.py
 # serve demo/build over http, wrapping page.html in <html><body>…</body></html> as _local.html, then:
@@ -158,6 +158,7 @@ node tests/e2e_demo.js http://localhost:8797/_local.html          # add "" phone
 node tests/e2e_features.js http://localhost:8797/_local.html
 node tests/e2e_addons.js http://localhost:8797/_local.html        # add phone for a phone-sized screen
 node tests/e2e_iphone_width.js http://localhost:8797/_local.html 375   # nothing wider than an iPhone (45 checks; also try 320 and 390)
+node tests/e2e_buyers.js http://localhost:8797/_local.html         # Buyers, Call Runner details, receipts, colours (38 checks); add phone
 ```
 
 The first browser test covers sign-up, the trial, syncing between a computer and a phone, inviting an agent, keeping agents' data private, the dashboard, roles, subscribing, the Help form, what happens when a subscription ends, sign-out, email links opened in the wrong browser, and the CRM not writing for a signed-out account. The agency test covers trying Agency 10, sharing earlier contacts, an agent seeing and adding to the shared list, two people adding at the same moment, an out-of-date screen not deleting a teammate's work, renaming, the shared dashboard, subscribing, switching back to Per agent, signing out with a second tab open, another person signing in on the same browser, and a removed agent losing the shared list.
