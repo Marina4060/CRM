@@ -3,3 +3,5 @@
 MARINA_CRM_*.html
 __pycache__/
 demo/build/
+node_modules/
+tests/package-lock.json
