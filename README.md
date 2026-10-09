@@ -4,7 +4,7 @@
 
 The rest of this page is about the single-file version.
 
-A real estate prospecting CRM that runs as one web page in the browser, with nothing to install. It covers a funnel board of contacts by suburb and street, the diary, calendar, call list, SMS and email templates, buyers, investors, expenses, logbook and BAS tracking.
+A real estate prospecting CRM that runs as one web page in the browser, with nothing to install. It covers a funnel board of contacts by suburb and street, a map of contacts coloured by stage, weekly vendor reports for listings, the diary, calendar, call list, SMS and email templates, buyers, investors, expenses, logbook and BAS tracking.
 
 ## Using it
 
@@ -29,5 +29,6 @@ The script:
 - empties every contact, buyer, diary entry, appointment, expense, income record, logbook entry, investor, listing and sale stored in the file, plus the saved screen snapshot
 - replaces the owner's name, agency, phone, email, logo and brand colour with the **My details** profile
 - renames the browser storage keys (`mi_…` → `crm_…`), so the blank app never picks up data the original saved in the same browser
+- builds in the add-on features from `tools/addons/`: the **Map** view and **Vendor Reports**. To add them to an existing file on their own, run `python3 tools/add_addons.py index.html`
 
 If a later version of the CRM has changed shape, the script stops with a message naming what it could not find, rather than producing a half-cleaned file. Never commit the personal source file: `.gitignore` excludes `MARINA_CRM_*.html`.

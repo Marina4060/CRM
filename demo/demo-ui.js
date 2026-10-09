@@ -21,6 +21,8 @@
     '<h2>Try these</h2>' +
     '<ol>' +
     '<li><b>Sign up.</b> Create an account, fill in My details, and add a contact with <b>+ Add Contact</b>.</li>' +
+    '<li><b>Map.</b> Add a few contacts with real street addresses, then tap <b>Map</b> beside Funnel and Table. Tap a pin, then <b>Who\'s within 300 m?</b></li>' +
+    '<li><b>Vendor report.</b> Mark a contact <b>Listed</b>, add visitors in <b>Reports \u2192 Open Home Register</b>, then open <b>\uD83D\uDCE3 Vendor Reports</b> and preview the report.</li>' +
     '<li><b>Invite an agent.</b> Open <b>Team</b>, invite any email, sign out, then create an account with that email and tap <b>Join</b>.</li>' +
     '<li><b>Shared list.</b> As the owner, open <b>Billing</b> and try <b>Agency 10</b>. Now contacts either of you add show for both.</li>' +
     '<li><b>Team dashboard.</b> As the owner, open <b>Team</b> for each person\'s contacts added, calls, texts and emails.</li>' +

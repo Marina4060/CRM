@@ -110,6 +110,7 @@ If someone asks for their account to be deleted, delete them in *Authentication 
 - **Terms of service and privacy policy:** drafts are in `web/terms.html` and `web/privacy.html`, written for Australian law (Privacy Act and APPs, Spam Act, Do Not Call Register, Australian Consumer Law, Notifiable Data Breaches). Fill in the `legal` details in `web/config.js`, and **have a lawyer review both before launch**. Check that the service providers listed in the privacy policy match the ones you actually use (e.g. your email sender and website host).
 - An ABN on invoices, and a decision on GST (see step 2).
 - A support email address you check.
+- **Map services:** the Map view uses OpenStreetMap's free map tiles and address finder (Nominatim). Their rules allow light use: each address is looked up once, at most one a second, and saved. That is fine for a pilot. Before advertising widely, move to a paid map provider (for example MapTiler, Stadia Maps or Geoscape) and update the provider list in the privacy policy. The addresses are set at the top of `tools/addons/map.js`; if the address finder changes, also change `GEOCODER` in `tools/add_addons.py` so the page is allowed to reach it.
 
 ## How access works
 
@@ -136,10 +137,10 @@ If someone asks for their account to be deleted, delete them in *Authentication 
 On a machine with PostgreSQL 16 and Node:
 
 ```
-# the database rules (78 checks)
+# the database rules (84 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (45 + 38 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (52 + 38 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
@@ -149,11 +150,13 @@ PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_agency.js http://localhost:8787
 kill $MOCK
 
-# the clickable demo: a new user's whole journey (32 checks), and every CRM feature opened (36)
+# the clickable demo: a new user's whole journey (32 checks), every CRM feature opened (38),
+# and the Map view and Vendor Reports (43; the map's address finder and tiles are stand-ins, so it runs offline)
 python3 tools/make_demo.py
 # serve demo/build over http, wrapping page.html in <html><body>…</body></html> as _local.html, then:
 node tests/e2e_demo.js http://localhost:8797/_local.html          # add "" phone for a phone-sized screen
 node tests/e2e_features.js http://localhost:8797/_local.html
+node tests/e2e_addons.js http://localhost:8797/_local.html        # add phone for a phone-sized screen
 ```
 
 The first browser test covers sign-up, the trial, syncing between a computer and a phone, inviting an agent, keeping agents' data private, the dashboard, roles, subscribing, the Help form, what happens when a subscription ends, sign-out, email links opened in the wrong browser, and the CRM not writing for a signed-out account. The agency test covers trying Agency 10, sharing earlier contacts, an agent seeing and adding to the shared list, two people adding at the same moment, an out-of-date screen not deleting a teammate's work, renaming, the shared dashboard, subscribing, switching back to Per agent, signing out with a second tab open, another person signing in on the same browser, and a removed agent losing the shared list.

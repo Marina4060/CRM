@@ -11,6 +11,8 @@ What it does:
     "My details" profile each user fills in on first open
   * renames the browser storage keys so the blank app can never pick up
     data saved by the original CRM in the same browser
+  * builds in the add-on features (Map view, Vendor Reports) from
+    tools/addons/ – see add_addons.py
 
 It fails loudly if something it expects is missing, so it can be re-run on
 later versions of the CRM and tell you what moved.
@@ -22,6 +24,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import jslex  # noqa: E402
+from add_addons import add_addons  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WARN = []
@@ -585,6 +588,7 @@ def main(src_path, out_path):
     html = rewrite_call_list(html)
     html = rename_keys(html)
     html = add_profile(html)
+    html = add_addons(html)
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html)
     print('wrote %s (%d KB)' % (out_path, len(html.encode('utf-8')) // 1024))
