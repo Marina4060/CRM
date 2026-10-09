@@ -4,9 +4,10 @@
     python3 tools/add_addons.py index.html
 
 Adds the Map view (tools/addons/map.js, with Leaflet bundled from
-tools/addons/vendor/) and Vendor Reports (tools/addons/vendor_report.js) just
-before </body>, between ADDONS markers, so running it again replaces them
-rather than adding a second copy. It also lets the page reach the map's
+tools/addons/vendor/), Vendor Reports (tools/addons/vendor_report.js) and the
+iPhone fit fixes (tools/addons/iphone.css) just before </body>, between
+ADDONS markers, so running it again replaces them rather than adding a second
+copy. It also repairs a few markup mistakes in the CRM itself (see FIXES). It also lets the page reach the map's
 address finder in its Content-Security-Policy (map tiles are images, which the
 policy already allows).
 
@@ -34,16 +35,39 @@ def block():
         'window.CRM_LEAFLET = L.noConflict();',
         read('map.js'),
         read('vendor_report.js'),
+        read('fixes.js'),
     ]
     for s in scripts:
         if '</script' in s.lower():
             raise SystemExit('add_addons: a script contains </script>')
-    return (BEGIN + '\n<style>\n' + read('vendor', 'leaflet.css') + '\n</style>\n'
+    return (BEGIN + '\n<style>\n' + read('vendor', 'leaflet.css') + '\n' + read('iphone.css') + '\n</style>\n'
             + ''.join('<script>\n' + s + '\n</script>\n' for s in scripts) + END + '\n')
+
+
+# Markup fixes for the CRM itself. Each applies only if the problem is still
+# there, so a later copy of the CRM that has it fixed builds cleanly.
+FIXES = [
+    # The expenses table was wrapped in an unclosed <div id="buyers-table-wrap">,
+    # which put the Buyers window inside the (hidden) Expenses window: the
+    # Buyers button showed nothing. That opening tag belongs around the buyers
+    # table (which already has its closing tag), which "Group by property"
+    # hides and shows.
+    ('<div id="buyers-table-wrap"><table class="exp-table">', '<table class="exp-table">'),
+    ('<div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>',
+     '<div id="buyers-table-wrap"><div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>'),
+]
+
+
+def fix_markup(html):
+    for old, new in FIXES:
+        if html.count(old) == 1 and (new in old or new not in html):   # once only
+            html = html.replace(old, new)
+    return html
 
 
 def add_addons(html):
     html = re.sub(re.escape(BEGIN) + r'.*?' + re.escape(END) + r'\n?', '', html, flags=re.S)
+    html = fix_markup(html)
     i = html.rfind('</body>')
     if i < 0:
         raise SystemExit('add_addons: </body> not found')

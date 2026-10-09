@@ -81,6 +81,8 @@ form .btn[type=submit] { width: 100%; }
 main { flex: 1; min-height: 0; position: relative; }
 .tab { position: absolute; inset: 0; }
 .tab-crm iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
+/* iPhone: Safari stretches a frame to fit its content unless it starts narrow */
+.tab-crm iframe { width: 1px; min-width: 100%; }
 .page { overflow-y: auto; padding: 20px 16px 40px; }
 .page > * { max-width: 1100px; margin-left: auto; margin-right: auto; }
 .page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -153,3 +155,10 @@ table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
 .menu-pop .menu-danger { color: var(--red); }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer; }
 .dlg form { display: flex; flex-direction: column; gap: 12px; }
+
+/* ── iPhone fit: no sideways scrolling, and no zooming in on text boxes ── */
+html, body { max-width: 100%; overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+@media (max-width: 760px) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]), select, textarea { font-size: 16px !important; }
+}

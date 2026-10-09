@@ -5672,7 +5672,7 @@ logSession('Session started — CRM opened');
           <button class="exp-add-btn" onclick="addIncome()" style="background:#3B6D11">+ Add income</button>
         </div>
         <div style="overflow-x:auto">
-          <div id="buyers-table-wrap"><table class="exp-table">
+          <table class="exp-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -5733,7 +5733,7 @@ function todayStr() {
           <div class="feat-fg" style="min-width:200px"><div class="feat-fl">Notes / Requirements</div><input class="feat-inp" id="b-note" placeholder="e.g. Must have shed, rural views"></div>
           <button class="feat-add" onclick="addBuyer()">+ Add Buyer</button>
         </div>
-        <div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Type</th><th>Beds</th><th>Budget</th><th>Status</th><th>Last Contact</th><th>Notes</th><th>Matched Listings</th><th></th></tr></thead><tbody id="buyers-tbody"></tbody></table></div></div>
+        <div id="buyers-table-wrap"><div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Type</th><th>Beds</th><th>Budget</th><th>Status</th><th>Last Contact</th><th>Notes</th><th>Matched Listings</th><th></th></tr></thead><tbody id="buyers-tbody"></tbody></table></div></div>
       </div>
       <div class="feat-footer">
         <span style="font-size:12px;color:var(--t3)">Buyers saved for this session</span>
@@ -11498,6 +11498,26 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		}
 	}
 
+/* ══ iPhone fit ══
+   Safari on iPhone widens the whole page to fit anything drawn past the edge
+   of the screen, even a closed panel parked off to the side. Then the CRM only
+   fits with the phone turned sideways. Nothing may sit past the edge. */
+.td-box:not(.open){display:none}
+html,body{max-width:100%;overflow-x:hidden}
+@supports (overflow:clip){html,body{overflow-x:clip}}
+/* Safari zooms in on any text box with writing smaller than 16px, and stays zoomed */
+@media (max-width:760px){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),select,textarea{font-size:16px !important}
+}
+/* pop-up windows stay inside the screen; their bottom-bar buttons wrap instead of pushing past the edge */
+@media (max-width:760px){
+  .feat-box{max-width:calc(100vw - 8px) !important}
+  .feat-footer{flex-wrap:wrap}
+}
+@media (max-width:760px){
+  .ai-panel{max-width:100vw !important;box-sizing:border-box}
+}
+
 </style>
 <script>
 /* @preserve
@@ -12148,6 +12168,20 @@ window.CRM_LEAFLET = L.noConflict();
 
   // for tests and the AI assistant
   window.__vendorReports = { stats: function(L, we){ var o = weekEnd; weekEnd = we || weekEnd; var s = stats(L); weekEnd = o; return s; }, prices: prices, sameAddr: sameAddr, db: function(){ return DB; } };
+})();
+
+</script>
+<script>
+/* ══ Small fixes to the CRM itself ══ */
+(function(){
+  // A new user starts their bookkeeping today: the first monthly check falls
+  // due next month, not in their first minute with an empty CRM.
+  try {
+    if(typeof BOOK !== 'undefined' && !BOOK.lastDone && !localStorage.getItem('crm_book') && typeof saveBook === 'function'){
+      var t = (typeof _todayISO === 'function') ? _todayISO() : new Date().toISOString().slice(0, 10);
+      BOOK.lastDone = t; BOOK.startMonth = t.slice(0, 7); saveBook();
+    }
+  } catch (e) {}
 })();
 
 </script>
