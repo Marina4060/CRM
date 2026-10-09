@@ -209,6 +209,21 @@
   </form>
 </dialog>
 
+<dialog id="invite-dlg" class="dlg" aria-labelledby="invite-title">
+  <form method="dialog" class="stack">
+    <h2 id="invite-title">Send the invite</h2>
+    <p>To: <b id="invite-to"></b></p>
+    <label>Message<textarea id="invite-msg" rows="10" readonly></textarea></label>
+    <p id="invite-demo" class="muted small" hidden>This demo doesn't send emails. Copy the message to see what the person would receive.</p>
+    <p id="invite-done" class="muted small" role="status" hidden></p>
+    <div class="row wrap">
+      <button class="btn" type="button" id="invite-copy">Copy message</button>
+      <a class="btn ghost" id="invite-mail" href="#">Open in email app</a>
+      <button class="btn ghost" type="submit" value="close">Close</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" hidden></div>
 
 <script src="config.js"></script>

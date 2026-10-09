@@ -74,6 +74,17 @@ async function until(fn, ms = 10000) { const t = Date.now(); while (Date.now() -
   await p.fill('#f-invite [name=email]', 'jo@agency.test'); await p.click('#f-invite button[type=submit]');
   check('invite shows as waiting', !!(await until(async () => /jo@agency\.test/.test(await p.textContent('#invites')))));
   await snap('team-invited');
+  // "Email invite" shows the message in the app; it must never navigate away (the Claude preview blocks email apps)
+  const before = p.url();
+  await p.click('#invites [data-mail]');
+  check('Email invite opens the message in the app', !!(await until(async () => p.isVisible('#invite-dlg'))));
+  const msg = await p.inputValue('#invite-msg');
+  check('the message has the invite link and the email to sign up with', /\?invite=\w+/.test(msg) && /jo@agency\.test/.test(msg), msg.slice(0, 200));
+  check('the demo hides "Open in email app"', !(await p.isVisible('#invite-mail')));
+  await p.click('#invite-copy');
+  check('Copy message confirms', !!(await until(async () => /Message copied|Select the message/.test(await p.textContent('#invite-done')))));
+  await p.click('#invite-dlg button[value=close]');
+  check('the page stays put', p.url() === before && !(await p.isVisible('#invite-dlg')));
 
   console.log('4. sign out, agent signs up with the invited email');
   await p.click('#menu-btn'); await p.click('#menu [data-act=signout]');

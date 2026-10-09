@@ -140,7 +140,7 @@ On a machine with PostgreSQL 16 and Node:
 # the database rules (84 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (52 + 38 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (53 + 38 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
@@ -150,7 +150,7 @@ PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_agency.js http://localhost:8787
 kill $MOCK
 
-# the clickable demo: a new user's whole journey (32 checks), every CRM feature opened (38),
+# the clickable demo: a new user's whole journey (37 checks), every CRM feature opened (38),
 # and the Map view and Vendor Reports (43; the map's address finder and tiles are stand-ins, so it runs offline)
 python3 tools/make_demo.py
 # serve demo/build over http, wrapping page.html in <html><body>…</body></html> as _local.html, then:

@@ -877,17 +877,40 @@
     $('#invites').innerHTML = invs.length ? '<h2>Waiting to join</h2>' + invs.map(function (i) {
       return '<div class="inv"><div class="who"><b>' + esc(i.email) + '</b> <span class="role ' + i.role + '">' + roleName(i.role) + '</span><br><span class="muted small">Link expires ' + fmtDate(i.expires_at) + '</span></div>' +
         '<button class="btn small" data-copy="' + esc(i.token) + '">Copy link</button>' +
-        '<a class="btn small" href="' + mailInvite(i) + '">Email invite</a>' +
+        '<button class="btn small" data-mail="' + esc(i.token) + '">Email invite</button>' +
         '<button class="btn small danger" data-revoke="' + esc(i.id) + '">Cancel</button></div>';
     }).join('') : '';
     $$('[data-copy]').forEach(function (b) { b.onclick = function () { copy(inviteLink(b.getAttribute('data-copy'))); }; });
+    $$('[data-mail]').forEach(function (b) { b.onclick = function () { openInviteMail(invs.filter(function (i) { return i.token === b.getAttribute('data-mail'); })[0]); }; });
     $$('[data-revoke]').forEach(function (b) { b.onclick = function () { rpc('revoke_invite', { invite_id: b.getAttribute('data-revoke') }).then(renderTeam).catch(function (e) { toast(e.message); }); }; });
   }
-  function mailInvite(i) {
+  // the invite email, shown in the app: copying it always works, even where the
+  // browser won't open an email app (the Claude preview, some work computers)
+  function inviteMail(i) {
     var who = ctx.user.full_name || ctx.user.email;
-    return 'mailto:' + encodeURIComponent(i.email) + '?subject=' + encodeURIComponent('Join ' + (ctx.team.name || 'our team') + ' on ' + (C.appName || 'Real Estate CRM')) +
-      '&body=' + encodeURIComponent('Hi,\n\n' + who + ' has invited you to join ' + (ctx.team.name || 'the team') + ' on ' + (C.appName || 'Real Estate CRM') + '.\n\nOpen this link and create your account with this email address (' + i.email + '):\n' + inviteLink(i.token) + '\n\nThe link works for 14 days.');
+    return { to: i.email, subject: 'Join ' + (ctx.team.name || 'our team') + ' on ' + (C.appName || 'Real Estate CRM'),
+      body: 'Hi,\n\n' + who + ' has invited you to join ' + (ctx.team.name || 'the team') + ' on ' + (C.appName || 'Real Estate CRM') + '.\n\nOpen this link and create your account with this email address (' + i.email + '):\n' + inviteLink(i.token) + '\n\nThe link works for 14 days.' };
   }
+  function openInviteMail(i) {
+    if (!i) return;
+    var m = inviteMail(i), d = $('#invite-dlg');
+    $('#invite-to').textContent = m.to;
+    $('#invite-msg').value = 'Subject: ' + m.subject + '\n\n' + m.body;
+    $('#invite-done').hidden = true;
+    $('#invite-demo').hidden = !window.CRM_DEMO;
+    var a = $('#invite-mail');
+    a.hidden = !!window.CRM_DEMO;
+    a.href = 'mailto:' + encodeURIComponent(m.to) + '?subject=' + encodeURIComponent(m.subject) + '&body=' + encodeURIComponent(m.body);
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  }
+  $('#invite-copy').addEventListener('click', function () {
+    var box = $('#invite-msg'), done = function () { $('#invite-done').textContent = 'Message copied. Paste it into an email or text to ' + $('#invite-to').textContent + '.'; $('#invite-done').hidden = false; };
+    (navigator.clipboard ? navigator.clipboard.writeText(box.value) : Promise.reject()).then(done).catch(function () {
+      box.focus(); box.select();
+      try { if (document.execCommand('copy')) { done(); return; } } catch (e) { }
+      $('#invite-done').textContent = 'Select the message above and copy it.'; $('#invite-done').hidden = false;
+    });
+  });
   function copy(text) {
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('Invite link copied.'); })
       .catch(function () { prompt('Copy this invite link:', text); });

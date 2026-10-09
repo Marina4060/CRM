@@ -86,6 +86,10 @@ const serverState = async (email, key) => (await db.query(
   const inv = await until(async () => (await db.query("select token from public.invites where email = 'alex@agency.test'")).rows[0]);
   check('invite created', !!inv);
   check('invite listed with copy link', !!(await until(() => A.isVisible('[data-copy]'))));
+  await A.click('#invites [data-mail]');
+  const mailHref = await A.getAttribute('#invite-mail', 'href');
+  check('Email invite shows the message, with Open in email app', await A.isVisible('#invite-dlg') && await A.isVisible('#invite-mail') && /^mailto:alex%40agency\.test\?subject=/.test(mailHref) && mailHref.indexOf(inv.token) > 0, mailHref);
+  await A.click('#invite-dlg button[value=close]');
   const B = await newUser(browser, { label: 'agent' });
   await B.goto(BASE + '/?invite=' + inv.token);
   check('invite link opens sign-up with a note', await B.isVisible('#f-signup') && await B.isVisible('#invite-note'));

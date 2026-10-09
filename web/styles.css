@@ -148,6 +148,7 @@ table.grid { border-collapse: collapse; width: 100%; font-size: 13px; }
 .dlg h2 { margin: 0; font-size: 18px; }
 .dlg p { margin: 0; line-height: 1.5; }
 .dlg input { display: block; width: 100%; margin-top: 6px; }
+.dlg textarea { display: block; width: 100%; margin-top: 6px; font: inherit; font-size: 14px; line-height: 1.45; padding: 8px 10px; border: 1px solid var(--line, #d8d8d2); border-radius: 8px; resize: vertical; background: var(--card); color: var(--ink); }
 .btn.danger:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
 .menu-pop .menu-danger { color: var(--red); }
 .linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--muted); text-decoration: underline; cursor: pointer; }
