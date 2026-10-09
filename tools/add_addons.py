@@ -61,6 +61,9 @@ FIXES = [
     ('<div id="buyers-table-wrap"><table class="exp-table">', '<table class="exp-table">'),
     ('<div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>',
      '<div id="buyers-table-wrap"><div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>'),
+    # leftovers of the original agency in the AI assistant: sign off as the agent
+    ("Sign off as M&I team.';", "Sign off as '+ME.name+', '+ME.agency+'.';"),
+    ('M&amp;I AI assistant', 'MICRM AI assistant'),
 ]
 
 

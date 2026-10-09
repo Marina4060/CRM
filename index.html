@@ -3,7 +3,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src https://nominatim.openstreetmap.org 'self' 'unsafe-inline' 'unsafe-eval' https://fonts.googleapis.com https://fonts.gstatic.com https://api.anthropic.com data: sms: tel: mailto:; img-src blob: 'self' data: https:; form-action 'self' sms: tel: mailto:; frame-src 'self' about: blob: data: file:; child-src 'self' about: blob: data: file:;">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Real Estate CRM</title>
+<title>MICRM</title>
 <script>
 /* ══ MY DETAILS: the agent using this CRM ══
    Everything that signs a message (name, agency, phone, email, logo, brand
@@ -599,7 +599,7 @@ body.crm-searching [id$="-pills"]{display:none !important}
 
 <div class="topbar">
   <div style="display:flex;flex-direction:column;margin-right:8px">
-    <div class="logo">Real Estate <span>CRM</span></div><button class="pill" style="width:auto;align-self:flex-start" onclick="openProfile()" title="Your name, agency, phone and email used in messages">👤 My details</button>
+    <div class="logo">MI<span>CRM</span></div><button class="pill" style="width:auto;align-self:flex-start" onclick="openProfile()" title="Your name, agency, phone and email used in messages">👤 My details</button>
     <div style="font-size:10px;color:#1D9E75;letter-spacing:0.5px;font-weight:500;margin-top:-2px">[[name]] · [[agency]]</div>
   </div>
   <div id="save-badge" style="font-size: 10px; background: rgb(225, 245, 238); color: rgb(15, 110, 86); border-radius: 20px; padding: 2px 8px; opacity: 1; transition: opacity 0.4s; flex-shrink: 0;">✓ Saved</div>
@@ -697,7 +697,7 @@ body.crm-searching [id$="-pills"]{display:none !important}
     <div class="ai-head">
       <div class="ai-icon">✦</div>
       <div>
-        <div style="font-size:13px;font-weight:500">M&amp;I AI assistant</div>
+        <div style="font-size:13px;font-weight:500">MICRM AI assistant</div>
         <div style="font-size:11px;color:var(--t3)">Knows all your contacts</div>
       </div>
     </div>
@@ -4292,7 +4292,7 @@ function sys() {
   data.forEach(function(c){if(cnt[c.stage]!==undefined)cnt[c.stage]++;});
   var apprList=data.filter(function(c){return c.stage==='appraisal';}).map(function(c){return c.n+' at '+c.a+' ('+c.s+') appraised '+c.apprDate+': '+c.note;}).join('\n');
   var allC=data.map(function(c){return [c.stage,c.n,c.a,c.s,c.ph.replace(/\n/g,', '),c.em.replace(/\n/g,', '),c.date||'-',c.apprDate||'-',c.note.replace(/\n/g,' ')].join(' | ');}).join('\n');
-  return 'You are an AI assistant in the CRM of '+ME.name+', a real estate agent at '+ME.agency+'.\n\nPIPELINE: Hot:'+cnt.hot+' Warm:'+cnt.warm+' Appraisal:'+cnt.appraisal+' Message:'+cnt.msg+' Cold:'+cnt.cold+' Total:'+data.length+'\n\nAPPRAISED (done, not listed):\n'+(apprList||'None')+'\n\nALL CONTACTS (stage|name|address|street|phone|email|last contact|appraisal date|notes):\n'+allC+'\n\nHelp the agent: answer questions, draft SMS/email in a warm professional tone, summarise pipeline, suggest priorities. Sign off as M&I team.';
+  return 'You are an AI assistant in the CRM of '+ME.name+', a real estate agent at '+ME.agency+'.\n\nPIPELINE: Hot:'+cnt.hot+' Warm:'+cnt.warm+' Appraisal:'+cnt.appraisal+' Message:'+cnt.msg+' Cold:'+cnt.cold+' Total:'+data.length+'\n\nAPPRAISED (done, not listed):\n'+(apprList||'None')+'\n\nALL CONTACTS (stage|name|address|street|phone|email|last contact|appraisal date|notes):\n'+allC+'\n\nHelp the agent: answer questions, draft SMS/email in a warm professional tone, summarise pipeline, suggest priorities. Sign off as '+ME.name+', '+ME.agency+'.';
 }
 function addMsg(txt,cls) {
   var d=document.getElementById('ai-msgs');

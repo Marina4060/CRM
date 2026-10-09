@@ -389,14 +389,14 @@ def add_profile(html):
     with open(os.path.join(HERE, 'profile.js'), encoding='utf-8') as f:
         js = f.read()
     # must run before any other script builds a string with ME.*
-    html, n = re.subn(r'(<title>)[^<]*(</title>)', r'\1Real Estate CRM\2', html, count=1)
+    html, n = re.subn(r'(<title>)[^<]*(</title>)', r'\1MICRM\2', html, count=1)
     must(n == 1, 'title not found')
     i = html.find('<style>')
     must(i > 0, 'first <style> not found')
     html = html[:i] + '<script>\n' + js + '\n</script>\n' + html[i:]
     # a "My details" button beside the logo
     html, n = re.subn(r'(<div class="logo">)(.*?)(</div>)',
-                      r'\1Real Estate <span>CRM</span>\3<button class="pill" style="width:auto;align-self:flex-start" onclick="openProfile()" '
+                      r'\1MI<span>CRM</span>\3<button class="pill" style="width:auto;align-self:flex-start" onclick="openProfile()" '
                       r'title="Your name, agency, phone and email used in messages">👤 My details</button>',
                       html, count=1, flags=re.S)
     must(n == 1, 'logo not found')

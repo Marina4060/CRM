@@ -1,6 +1,6 @@
 {
-  "name": "Real Estate CRM",
-  "short_name": "RE CRM",
+  "name": "MICRM",
+  "short_name": "MICRM",
   "description": "Prospecting CRM for real estate agents and agencies.",
   "start_url": "./",
   "scope": "./",

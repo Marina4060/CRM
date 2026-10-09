@@ -33,7 +33,7 @@ You need three accounts: **Supabase** (database and logins), **Stripe** (payment
 
 ## 2. Stripe
 
-1. **Product catalogue → Add product:** name it "Real Estate CRM" and add three **recurring monthly** prices in **AUD**. Copy each price ID (`price_…`):
+1. **Product catalogue → Add product:** name it "MICRM" and add three **recurring monthly** prices in **AUD**. Copy each price ID (`price_…`):
    - **Per agent:** 100.00 AUD per month, **per unit** (each unit is one agent) → `STRIPE_PRICE_ID`
    - **Agency 10:** 500.00 AUD per month, flat → `STRIPE_PRICE_AGENCY_10`
    - **Agency 20:** 1000.00 AUD per month, flat → `STRIPE_PRICE_AGENCY_20`

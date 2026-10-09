@@ -1,4 +1,4 @@
-/* Real Estate CRM – hosted shell.
+/* MICRM – hosted shell.
    Signs people in, checks their trial or subscription, loads the CRM, keeps
    its data in sync with the cloud, and runs the Team, Billing and Help pages. */
 (function () {
@@ -915,8 +915,8 @@
   // browser won't open an email app (the Claude preview, some work computers)
   function inviteMail(i) {
     var who = ctx.user.full_name || ctx.user.email;
-    return { to: i.email, subject: 'Join ' + (ctx.team.name || 'our team') + ' on ' + (C.appName || 'Real Estate CRM'),
-      body: 'Hi,\n\n' + who + ' has invited you to join ' + (ctx.team.name || 'the team') + ' on ' + (C.appName || 'Real Estate CRM') + '.\n\nOpen this link and create your account with this email address (' + i.email + '):\n' + inviteLink(i.token) + '\n\nThe link works for 14 days.' };
+    return { to: i.email, subject: 'Join ' + (ctx.team.name || 'our team') + ' on ' + (C.appName || 'MICRM'),
+      body: 'Hi,\n\n' + who + ' has invited you to join ' + (ctx.team.name || 'the team') + ' on ' + (C.appName || 'MICRM') + '.\n\nOpen this link and create your account with this email address (' + i.email + '):\n' + inviteLink(i.token) + '\n\nThe link works for 14 days.' };
   }
   function openInviteMail(i) {
     if (!i) return;

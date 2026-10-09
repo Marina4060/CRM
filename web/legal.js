@@ -2,7 +2,7 @@
 (function () {
   var C = window.CRM_CONFIG || {}, L = C.legal || {};
   var v = {
-    app: C.appName || 'Real Estate CRM', business: L.businessName, abn: L.abn, address: L.address,
+    app: C.appName || 'MICRM', business: L.businessName, abn: L.abn, address: L.address,
     email: L.email || C.supportEmail, support: C.supportEmail, state: L.state, gst: L.gst,
     date: L.effectiveDate, days: String(L.retentionDays || 90), trial: String(C.trialDays || 14)
   };

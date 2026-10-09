@@ -31,7 +31,7 @@ def main():
     scripts = [read(WEB, 'config.js'), read(DEMO, 'demo-backend.js'), read(WEB, 'app.js'), read(DEMO, 'demo-ui.js')]
     for s in scripts:
         assert '</script' not in s.lower(), 'a script contains </script>'
-    page = ('<title>Real Estate CRM Online</title>\n'
+    page = ('<title>MICRM</title>\n'
             '<meta name="theme-color" content="#185FA5">\n'
             '<link rel="icon" href="icons/icon-192.png" type="image/png">\n'
             '<style>\n' + read(WEB, 'styles.css') + '\n' + read(DEMO, 'demo.css') + '\n</style>\n'
