@@ -58,8 +58,8 @@ handle("create-checkout", async (req) => {
     billing_address_collection: "auto",
     tax_id_collection: { enabled: true },
     customer_update: { name: "auto", address: "auto" },
-    success_url: `${SITE_URL}/?checkout=success#billing`,
-    cancel_url: `${SITE_URL}/?checkout=cancelled#billing`,
+    success_url: `${SITE_URL}/app.html?checkout=success#billing`,
+    cancel_url: `${SITE_URL}/app.html?checkout=cancelled#billing`,
   });
   return json({ url: session.url });
 });

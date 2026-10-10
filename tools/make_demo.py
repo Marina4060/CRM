@@ -25,7 +25,7 @@ def read(*p):
 
 def main():
     os.makedirs(os.path.join(OUT, 'icons'), exist_ok=True)
-    html = read(WEB, 'index.html')
+    html = read(WEB, 'app.html')
     body = re.search(r'<body>(.*)</body>', html, re.S).group(1)
     body = re.sub(r'<script[^>]*></script>\s*', '', body)          # scripts are inlined below
     scripts = [read(WEB, 'config.js'), read(DEMO, 'demo-backend.js'), read(WEB, 'app.js'), read(DEMO, 'demo-ui.js')]

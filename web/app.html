@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MICRM</title>
+<meta name="description" content="Prospecting CRM for real estate agents and agencies.">
+<meta name="theme-color" content="#185FA5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MICRM">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<noscript>This app needs JavaScript turned on.</noscript>
+
+<!-- loading -->
+<section id="scr-loading" class="screen center">
+  <div class="spinner" aria-hidden="true"></div>
+  <p id="loading-msg" class="muted">Loading…</p>
+</section>
+
+<!-- sign in / sign up / reset -->
+<section id="scr-auth" class="screen center" hidden>
+  <div class="card auth-card">
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="40" height="40"><span>MICRM</span></div>
+    <div id="invite-note" class="note" hidden></div>
+
+    <form id="f-signin" class="stack">
+      <h1>Sign in</h1>
+      <label>Email<input name="email" type="email" autocomplete="email" required></label>
+      <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary" type="submit">Sign in</button>
+      <p class="links"><a href="#" data-auth="forgot">Forgot password?</a> · <a href="#" data-auth="signup">Create an account</a></p>
+    </form>
+
+    <form id="f-signup" class="stack" hidden>
+      <h1>Start your free trial</h1>
+      <p class="muted small" id="trial-line"></p>
+      <label>Your name<input name="name" autocomplete="name" required maxlength="80"></label>
+      <label>Email<input name="email" type="email" autocomplete="email" required></label>
+      <label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8">
+        <span class="hint">At least 8 characters</span></label>
+      <label class="check"><input name="agree" type="checkbox" required> <span id="agree-text">I agree to the terms and privacy policy</span></label>
+      <button class="btn primary" type="submit">Create account</button>
+      <p class="links"><a href="#" data-auth="signin">I already have an account</a></p>
+    </form>
+
+    <form id="f-forgot" class="stack" hidden>
+      <h1>Reset your password</h1>
+      <p class="muted small">We'll email you a link to choose a new one.</p>
+      <label>Email<input name="email" type="email" autocomplete="email" required></label>
+      <button class="btn primary" type="submit">Send reset link</button>
+      <p class="links"><a href="#" data-auth="signin">Back to sign in</a></p>
+    </form>
+
+    <form id="f-newpass" class="stack" hidden>
+      <h1>Choose a new password</h1>
+      <label>New password<input name="password" type="password" autocomplete="new-password" required minlength="8"></label>
+      <button class="btn primary" type="submit">Save password</button>
+    </form>
+
+    <div id="auth-check" class="stack" hidden>
+      <h1>Check your email</h1>
+      <p id="auth-check-msg"></p>
+      <p class="links"><a href="#" data-auth="signin">Back to sign in</a></p>
+    </div>
+
+    <p id="auth-err" class="err" role="alert" hidden></p>
+  </div>
+  <p class="muted small"><a href="terms.html">Terms of Service</a> · <a href="privacy.html">Privacy Policy</a></p>
+</section>
+
+<!-- no access: trial over or subscription ended -->
+<section id="scr-blocked" class="screen center" hidden>
+  <div class="card blocked-card stack">
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="40" height="40"><span>MICRM</span></div>
+    <h1 id="blocked-title">Your free trial has ended</h1>
+    <p id="blocked-msg"></p>
+    <p id="blocked-invite" class="invite-offer" hidden><span></span> <button class="btn primary small" type="button">Join</button></p>
+    <div class="row wrap">
+      <button id="blocked-subscribe" class="btn primary" hidden>Subscribe</button>
+      <button id="blocked-portal" class="btn" hidden>Manage billing</button>
+      <button class="btn" data-act="export">Download my data</button>
+      <button class="btn ghost" data-act="signout">Sign out</button>
+    </div>
+    <p class="muted small"><button class="linklike" type="button" data-act="delete-account">Delete my account</button></p>
+    <p class="muted small">Your contacts are kept safe. Subscribe any time to pick up where you left off.</p>
+    <p class="muted small">Questions? <a id="blocked-support" href="#">Contact support</a></p>
+  </div>
+</section>
+
+<!-- the app -->
+<section id="scr-app" class="screen app" hidden>
+  <header class="bar">
+    <a class="bar-brand" href="#crm" title="MICRM"><img src="icons/icon-192.png" alt="" width="26" height="26"><span>MICRM</span></a>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#crm" data-tab="crm">CRM</a>
+      <a href="#team" data-tab="team">Team</a>
+      <a href="#billing" data-tab="billing">Billing</a>
+      <a href="#help" data-tab="help">Help</a>
+    </nav>
+    <span id="plan-chip" class="chip"></span>
+    <span id="sync" class="sync" title="Cloud sync"><i></i><b>Synced</b></span>
+    <div class="menu">
+      <button id="menu-btn" class="avatar" aria-haspopup="true" aria-expanded="false" title="Account">?</button>
+      <div id="menu" class="menu-pop" hidden>
+        <div class="menu-who"><b id="menu-name"></b><span id="menu-email"></span><span id="menu-role" class="muted small"></span></div>
+        <button data-act="rename-me">Change my name</button>
+        <button data-act="export">Download my data</button>
+        <button data-act="download-app" hidden>Download MICRM for your desktop</button>
+        <button data-act="install" id="menu-install" hidden>Install app on this device</button>
+        <button data-act="signout">Sign out</button>
+        <button data-act="delete-account" class="menu-danger">Delete my account</button>
+      </div>
+    </div>
+  </header>
+  <div id="banner" class="banner" hidden></div>
+
+  <main>
+    <div id="tab-crm" class="tab tab-crm"><iframe id="crm-frame" title="CRM"></iframe></div>
+
+    <div id="tab-team" class="tab page" hidden>
+      <div class="page-head">
+        <div><h1 id="team-name">Team</h1><p class="muted" id="team-sub"></p></div>
+        <div class="row"><button class="btn small" id="team-rename" hidden>Rename team</button>
+          <button class="btn small" id="team-refresh">Refresh</button></div>
+      </div>
+      <div id="shared-box" class="card"></div>
+      <div id="dash" hidden>
+        <div class="tiles" id="dash-tiles"></div>
+        <h2>Pipeline by agent</h2>
+        <div class="table-wrap"><table class="grid" id="dash-table"></table></div>
+        <p class="muted small" id="dash-note"></p>
+      </div>
+      <h2>People</h2>
+      <div class="table-wrap"><table class="grid" id="people"></table></div>
+      <div id="invite-box" class="card stack" hidden>
+        <h2>Invite someone</h2>
+        <form id="f-invite" class="row wrap">
+          <input name="email" type="email" placeholder="agent@agency.com.au" required aria-label="Email">
+          <select name="role" aria-label="Role"><option value="agent">Agent</option><option value="admin">Admin</option></select>
+          <button class="btn primary" type="submit">Create invite</button>
+        </form>
+        <p class="muted small"><b>Agent</b>: their own CRM. <b>Admin</b>: also invites agents and sees the team dashboard. <b>Owner</b>: also billing and roles.</p>
+        <div id="invites"></div>
+      </div>
+      <div id="leave-box" hidden><button class="btn ghost" data-act="leave">Leave this team</button></div>
+    </div>
+
+    <div id="tab-billing" class="tab page" hidden>
+      <div class="page-head"><div><h1>Billing</h1><p class="muted" id="price-line"></p></div></div>
+      <div class="card stack" id="bill-card"></div>
+      <h2>Plans</h2>
+      <div class="plans" id="plans"></div>
+      <p class="muted small">All prices in Australian dollars. Every new team starts with a 14-day free trial; owners can try any plan during it.</p>
+    </div>
+
+    <div id="tab-help" class="tab page" hidden>
+      <div class="page-head"><div><h1>Help &amp; support</h1><p class="muted">We usually reply within one business day.</p></div></div>
+      <div class="cols">
+        <div class="card stack">
+          <h2>Send us a message</h2>
+          <form id="f-support" class="stack">
+            <label>About<select name="topic">
+              <option value="question">A question</option><option value="problem">Something isn't working</option>
+              <option value="billing">Billing</option><option value="idea">An idea for the app</option></select></label>
+            <label>Message<textarea name="message" rows="6" maxlength="5000" required></textarea></label>
+            <button class="btn primary" type="submit">Send</button>
+          </form>
+          <p class="muted small">Or email <a id="support-mail" href="#"></a></p>
+          <p class="muted small"><a href="terms.html" target="_blank">Terms of Service</a> · <a href="privacy.html" target="_blank">Privacy Policy</a></p>
+          <div id="my-requests"></div>
+        </div>
+        <div class="card stack" id="desktop-card" hidden>
+          <h2>MICRM on your desktop</h2>
+          <p>Download MICRM as a single file and open it in your browser, even without internet. It comes with your trial or subscription.</p>
+          <p class="muted small">The desktop copy keeps its contacts in the browser you open it in, separate from your online account. Use its Backup button, and Import file to move data between them.</p>
+          <p><button class="btn primary" type="button" data-act="download-app">Download MICRM</button></p>
+        </div>
+        <div class="card stack faq">
+          <h2>Common questions</h2>
+          <details><summary>Is my data saved if I lose my phone?</summary><p>Yes. Everything you do in the CRM is saved to your account in the cloud as you work. Sign in on any device to carry on.</p></details>
+          <details><summary>Can I use it on my phone like an app?</summary><p id="install-help"></p></details>
+          <details><summary>What if I have no signal?</summary><p>Keep working. Changes are kept on the device and sent to the cloud as soon as you're back online. The sync dot at the top shows the status.</p></details>
+          <details><summary>Can my principal see my clients?</summary><p>On the <b>Per agent</b> plan, no: owners and admins see pipeline numbers and activity counts, never client names or details. On the <b>Agency</b> plans the whole team works one shared contact list, so everyone in the team sees those contacts. Your diary, appointments, templates and expenses always stay personal.</p></details>
+          <details><summary>What's the difference between the plans?</summary><p><b>Per agent</b> ($100 AUD per agent per month): each agent has their own private contacts. <b>Agency 10</b> ($500 AUD per month, up to 10 people) and <b>Agency 20</b> ($1000 AUD per month, up to 20 people): one shared contact list for the whole agency, so anyone can pick up a lead and see every call, text and note on it. The team owner can switch plans under Billing.</p></details>
+          <details><summary>How does billing work?</summary><p id="billing-help"></p></details>
+          <details><summary>How do I cancel?</summary><p>The team owner opens <b>Billing → Manage billing</b> and cancels. The team keeps access until the end of the paid month. You can download your data at any time from the account menu.</p></details>
+          <details><summary>The CRM's own Backup button</summary><p>Still works, and is a good habit before big imports. It saves a file to your device; your cloud copy is separate.</p></details>
+          <h2>What's new</h2>
+          <div id="whatsnew" class="muted small">No updates yet.</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<dialog id="delete-dlg" class="dlg" aria-labelledby="delete-title">
+  <form method="dialog" class="stack" id="f-delete">
+    <h2 id="delete-title">Delete my account</h2>
+    <p>This permanently deletes your login, your contacts and notes, your diary and other CRM data, your dashboard figures and your support messages. It can't be undone.</p>
+    <p id="delete-sub" hidden><b>Your subscription is cancelled straight away</b>, with no refund for the rest of this month.</p>
+    <p class="muted small">Contacts you added to an agency's shared list stay with the agency. Invoices stay with Stripe, as tax law requires.</p>
+    <p><button class="btn small" type="button" data-act="export">Download my data first</button></p>
+    <label>Type DELETE to confirm<input id="delete-confirm" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+    <p id="delete-err" class="err" role="alert" hidden></p>
+    <div class="row wrap">
+      <button class="btn danger" type="button" id="delete-go" disabled>Delete my account</button>
+      <button class="btn ghost" type="submit" value="cancel">Keep my account</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="invite-dlg" class="dlg" aria-labelledby="invite-title">
+  <form method="dialog" class="stack">
+    <h2 id="invite-title">Send the invite</h2>
+    <p>To: <b id="invite-to"></b></p>
+    <label>Message<textarea id="invite-msg" rows="10" readonly></textarea></label>
+    <p id="invite-demo" class="muted small" hidden>This demo doesn't send emails. Copy the message to see what the person would receive.</p>
+    <p id="invite-done" class="muted small" role="status" hidden></p>
+    <div class="row wrap">
+      <button class="btn" type="button" id="invite-copy">Copy message</button>
+      <a class="btn ghost" id="invite-mail" href="#">Open in email app</a>
+      <button class="btn ghost" type="submit" value="close">Close</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

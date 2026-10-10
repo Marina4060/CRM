@@ -51,7 +51,7 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
 
   console.log('owner starts on the per-agent plan with a private contact');
   const A = await newUser(browser, 'owner');
-  await A.goto(BASE + '/');
+  await A.goto(BASE + '/app.html');
   await signUp(A, 'Morgan Principal', 'morgan@bay.test');
   let fa = await setupProfile(A);
   await addContact(fa, 'Early Private', '1 First St', 'First');
@@ -59,7 +59,7 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   const team = (await db.query("select t.id from public.teams t join public.team_members m on m.team_id = t.id join auth.users u on u.id = m.user_id where u.email = 'morgan@bay.test'")).rows[0].id;
 
   console.log('owner tries Agency 10');
-  await A.goto(BASE + '/#billing'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#billing'); await crmFrame(A);
   check('billing lists the three plans', (await A.$$eval('.plan-card h3', (h) => h.map((x) => x.textContent).join('|'))).replace(/Current/g, '').includes('Agency 10'));
   if (SHOTS) await A.screenshot({ path: SHOTS + '/a1-plans.png', fullPage: true });
   await A.click('[data-plan=agency_10]');
@@ -75,13 +75,13 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   check('sync shows it is shared', !!(await until(async () => /shared/i.test(await A.textContent('#sync')))), await A.textContent('#sync'));
 
   console.log('an agent joins and sees the shared list');
-  await A.goto(BASE + '/#team'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#team'); await crmFrame(A);
   await sleep(1500);
   check('once shared, the offer to share goes away', !(await A.isVisible('[data-act=share-mine]')));
   await A.fill('#f-invite [name=email]', 'riley@bay.test'); await A.click('#f-invite button[type=submit]');
   const inv = await until(async () => (await db.query("select token from public.invites where email = 'riley@bay.test'")).rows[0]);
   const B = await newUser(browser, 'agent');
-  await B.goto(BASE + '/?invite=' + inv.token);
+  await B.goto(BASE + '/app.html?invite=' + inv.token);
   await signUp(B, 'Riley Agent', 'riley@bay.test');
   let fb = await setupProfile(B);
   check("agent sees the owner's contacts", fb && (await until(() => names(fb).then((n) => n === 'Early Private'))));
@@ -96,7 +96,7 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   check('the call is saved with the contact and tagged with the agent', row && row.activity.length === 1 && row.activity[0].by === riley, row && JSON.stringify(row.activity));
 
   console.log('owner is told and loads the change');
-  await A.goto(BASE + '/#crm'); fa = await crmFrame(A);
+  await A.goto(BASE + '/app.html#crm'); fa = await crmFrame(A);
   await A.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   check('owner sees "updated by your team"', !!(await until(async () => /updated by your team/.test(await A.textContent('#banner')))));
   await A.click('#banner .btn:not(.ghost)');
@@ -125,7 +125,7 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   check('renamed contact replaces the old one (no duplicate)', renamed.includes('Agent Lead Renamed') && !renamed.includes('Agent Lead'), renamed.join('|'));
 
   console.log('dashboard');
-  await A.goto(BASE + '/#team'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#team'); await crmFrame(A);
   const tiles = await until(async () => { const t = await A.textContent('#dash-tiles'); return /Shared contacts\s*4/.test(t) ? t : null; });
   check('dashboard counts the shared list', !!tiles, await A.textContent('#dash-tiles'));
   const rrow = await A.evaluate(() => [...document.querySelectorAll('#dash-table tbody tr')].map((r) => r.innerText).find((t) => /Riley/.test(t)));
@@ -133,7 +133,7 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   if (SHOTS) await A.screenshot({ path: SHOTS + '/a2-team.png', fullPage: true });
 
   console.log('subscribe to Agency 10');
-  await A.goto(BASE + '/#billing'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#billing'); await crmFrame(A);
   await A.click('[data-act=subscribe]');
   check('subscribed', !!(await until(async () => /Subscribed/.test(await A.textContent('#plan-chip')), 12000)));
   const t2 = (await db.query('select plan, seats from public.teams where id = $1', [team])).rows[0];
@@ -142,7 +142,7 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   console.log('two tabs: signing out in one must not touch the cloud from the other');
   const B2 = await B.context().newPage();
   B2.on('pageerror', (e) => errors.push('agent tab 2: ' + e.message));
-  await B2.goto(BASE + '/#crm'); await crmFrame(B2);
+  await B2.goto(BASE + '/app.html#crm'); await crmFrame(B2);
   await sleep(1500);
   const rileyRows = async () => (await db.query("select key, value from public.crm_state where user_id = $1 order by key", [riley])).rows;
   const beforeRows = JSON.stringify(await rileyRows());
@@ -170,7 +170,7 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   check('agent signs back in to the shared list', !!fb);
 
   console.log('switching back to per-agent');
-  await A.goto(BASE + '/#billing'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#billing'); await crmFrame(A);
   await A.click('[data-plan=per_user]');
   check('plan switched', !!(await until(async () => (await db.query('select plan from public.teams where id = $1', [team])).rows[0].plan === 'per_user')));
   await B.reload(); fb = await crmFrame(B);
@@ -178,12 +178,12 @@ const names = (f) => f.evaluate(() => data.map((c) => c.n).sort().join('|'));
   check('the shared list is kept for later', (await teamNames(team)).length === 4);
 
   console.log('a removed agent keeps nothing');
-  await A.goto(BASE + '/#billing'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#billing'); await crmFrame(A);
   await A.click('[data-plan=agency_10]');
   await until(async () => (await db.query('select plan from public.teams where id = $1', [team])).rows[0].plan === 'agency_10');
   fb = await until(async () => { await B.reload(); const f = await crmFrame(B); return f && (await f.evaluate(() => data.length)) === 4 ? f : null; });
   check('agent has the shared list again', !!fb);
-  await A.goto(BASE + '/#team'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#team'); await crmFrame(A);
   await A.click(`[data-remove="${riley}"]`);
   await until(async () => !(await db.query('select 1 from public.team_members where user_id = $1 and team_id = $2', [riley, team])).rows.length);
   // the agent's screen is still open and they keep working

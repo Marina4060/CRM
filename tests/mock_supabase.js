@@ -239,7 +239,7 @@ http.createServer(async (req, res) => {
     if (url.pathname === '/__test/stripe') {   // "pay", then return like Stripe does
       await pool.query("update public.teams set subscription_status = 'active', seats = $1, plan = $3, stripe_customer_id = 'cus_' || left(id::text, 8), stripe_subscription_id = 'sub_x', current_period_end = now() + interval '30 days' where id = $2",
         [Number(url.searchParams.get('seats')), url.searchParams.get('team'), url.searchParams.get('plan') || 'per_user']);
-      res.writeHead(302, { Location: '/?checkout=success#billing' }); return res.end();
+      res.writeHead(302, { Location: '/app.html?checkout=success#billing' }); return res.end();
     }
     if (url.pathname === '/__test/cancelled') return send(res, 200, cancelled);
     if (url.pathname === '/__test/receipts') return send(res, 200, [...RECEIPTS.keys()]);

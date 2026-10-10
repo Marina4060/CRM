@@ -11,7 +11,8 @@ This turns the CRM into an online service. People sign up and get a 14-day free 
 Data is saved to the cloud and syncs between phone and computer. Teams have roles (owner, admin, agent) and a team dashboard. The owner can try any plan during the trial and switch plans later.
 
 ```
-web/                 the website people open (sign in, CRM, Team, Billing, Help, terms, privacy)
+web/                 the website: index.html is the front page (features, plans, Start free trial);
+                     app.html is the app people sign in to (CRM, Team, Billing, Help); terms, privacy
 index.html           the CRM itself; uploaded to private storage, only paying users can load it
 supabase/migrations  database: accounts, teams, roles, invites, trial, synced data, support, receipts
 supabase/functions   Stripe: checkout, change plan, change seats, billing portal, webhook
@@ -26,7 +27,7 @@ You need three accounts: **Supabase** (database and logins), **Stripe** (payment
 1. Create a project at supabase.com. Choose the **Sydney** region so client data stays in Australia.
 2. **Database:** open *SQL Editor*, paste in the whole of `supabase/migrations/20260928000000_subscriptions.sql`, and run it.
    (Or, with the Supabase CLI: `supabase link --project-ref <ref>` then `supabase db push`.)
-3. **Authentication → URL Configuration:** set *Site URL* to your website address, e.g. `https://crm.yourdomain.com.au`. Add the same address to *Redirect URLs*.
+3. **Authentication → URL Configuration:** set *Site URL* to the app's address, e.g. `https://micrm.com.au/app.html`. Add the same address to *Redirect URLs*. (The front page is at `https://micrm.com.au/`; sign-up, confirmation and password emails all lead to the app.)
 4. **Authentication → Providers → Email:** keep *Confirm email* on.
 5. **Authentication → Emails → SMTP:** set up your own email sender (e.g. Resend, Postmark or your domain's mail server). Supabase's built-in sender only sends a few emails an hour, which isn't enough once people sign up. Edit the email templates so they carry your business name.
 6. **Project Settings → API:** copy the *Project URL* and the *anon public* key for step 4. The *service_role* key is secret: use it only in step 5, and never put it in the website or in git.
@@ -54,7 +55,7 @@ supabase functions deploy delete-account
 supabase functions deploy purge-receipts
 supabase functions deploy stripe-webhook --no-verify-jwt
 
-supabase secrets set STRIPE_SECRET_KEY=sk_test_... SITE_URL=https://crm.yourdomain.com.au \
+supabase secrets set STRIPE_SECRET_KEY=sk_test_... SITE_URL=https://micrm.com.au \
   STRIPE_PRICE_ID=price_... STRIPE_PRICE_AGENCY_10=price_... STRIPE_PRICE_AGENCY_20=price_...
 ```
 
@@ -66,7 +67,7 @@ Then in Stripe, go to **Developers → Webhooks → Add endpoint**:
 ## 4. The website
 
 1. Edit `web/config.js`: `supabaseUrl`, `supabaseAnonKey`, `supportEmail`, and the `legal` section. The terms of service and privacy policy fill in your business name, ABN, address, privacy contact email, state, GST wording and start date from there.
-2. Deploy the `web/` folder to Netlify or Cloudflare Pages. With Netlify you can drag and drop the folder, then connect your domain. HTTPS is required for installing it as a phone app.
+2. Deploy the `web/` folder to Netlify or Cloudflare Pages. Your address shows the front page (`index.html`); its buttons lead to the app (`app.html`). The front page's screenshots are in `web/img/`, taken from the demo with made-up names. With Netlify you can drag and drop the folder, then connect your domain. HTTPS is required for installing it as a phone app.
 
 ## 5. Upload the CRM
 
@@ -155,7 +156,7 @@ On a machine with PostgreSQL 16 and Node:
 # the database rules (96 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (63 + 38 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (70 + 38 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!

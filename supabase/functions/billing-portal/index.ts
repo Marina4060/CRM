@@ -6,7 +6,7 @@ handle("billing-portal", async (req) => {
   if (!team.stripe_customer_id) throw new HttpError(404, "Your team doesn't have a subscription yet.");
   const session = await stripe.billingPortal.sessions.create({
     customer: team.stripe_customer_id,
-    return_url: `${SITE_URL}/#billing`,
+    return_url: `${SITE_URL}/app.html#billing`,
   });
   return json({ url: session.url });
 });

@@ -41,9 +41,20 @@ const serverState = async (email, key) => (await db.query(
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROMIUM || '/opt/pw-browsers/chromium' });
 
+  console.log('front page');
+  const F = await newUser(browser, { label: 'visitor' });
+  await F.goto(BASE + '/');
+  check('the front page opens at the site address', /Every street/.test(await F.textContent('h1')));
+  check('…with the plans and prices', /\$100/.test(await F.textContent('#pricing')) && /\$500/.test(await F.textContent('#pricing')) && /\$1,000/.test(await F.textContent('#pricing')));
+  await F.click('header .btn-primary');
+  check('Start free trial opens the sign-up form', !!(await until(() => F.isVisible('#f-signup'))) && /app\.html/.test(F.url()));
+  await F.goto(BASE + '/'); await F.click('header .signin');
+  check('Sign in opens the sign-in form', !!(await until(() => F.isVisible('#f-signin'))));
+  await F.context().close();
+
   console.log('owner signs up and starts a trial');
   const A = await newUser(browser, { label: 'owner' });
-  await A.goto(BASE + '/');
+  await A.goto(BASE + '/app.html');
   check('sign-in page shows', await A.isVisible('#f-signin'));
   await signUp(A, 'Olivia Owner', 'olivia@agency.test', 'password123');
   check('app opens after sign-up', await until(() => A.isVisible('#scr-app')));
@@ -64,7 +75,7 @@ const serverState = async (email, key) => (await db.query(
 
   console.log('same owner on a phone');
   const A2 = await newUser(browser, { label: 'owner-phone', viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  await A2.goto(BASE + '/');
+  await A2.goto(BASE + '/app.html');
   await A2.fill('#f-signin [name=email]', 'olivia@agency.test'); await A2.fill('#f-signin [name=password]', 'password123');
   await A2.click('#f-signin button[type=submit]');
   const f2 = await crmFrame(A2);
@@ -79,6 +90,12 @@ const serverState = async (email, key) => (await db.query(
   f = await crmFrame(A);
   check('first device loads the change', f && (await until(() => f.evaluate(() => data.length === 2))));
   if (SHOTS) await A2.screenshot({ path: SHOTS + '/2-phone.png' });
+
+  console.log('desktop download');
+  check('the account menu offers the desktop download during the trial', await A.evaluate(() => !document.querySelector('#menu [data-act="download-app"]').hidden));
+  const [appDl] = await Promise.all([A.waitForEvent('download', { timeout: 8000 }).catch(() => null), A.evaluate(() => document.querySelector('#menu [data-act="download-app"]').click())]);
+  check('it downloads MICRM.html', !!appDl && appDl.suggestedFilename() === 'MICRM.html', appDl && appDl.suggestedFilename());
+  if (appDl) { const fs = require('fs'); const p = await appDl.path(); const t = fs.readFileSync(p, 'utf8'); check('…which is the whole CRM', /<title>MICRM<\/title>/.test(t) && t.length > 500000, t.length); }
 
   console.log('receipts: added on the computer, opened on the phone');
   const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR42mP8z8DwnxEFMBkYAQDfvwf9e7a2OAAAAABJRU5ErkJggg==', 'base64');
@@ -107,7 +124,7 @@ const serverState = async (email, key) => (await db.query(
   await f.evaluate(() => closeExp());
 
   console.log('team: invite an agent');
-  await A.goto(BASE + '/#team'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#team'); await crmFrame(A);
   await A.fill('#f-invite [name=email]', 'alex@agency.test'); await A.click('#f-invite button[type=submit]');
   const inv = await until(async () => (await db.query("select token from public.invites where email = 'alex@agency.test'")).rows[0]);
   check('invite created', !!inv);
@@ -117,7 +134,7 @@ const serverState = async (email, key) => (await db.query(
   check('Email invite shows the message, with Open in email app', await A.isVisible('#invite-dlg') && await A.isVisible('#invite-mail') && /^mailto:alex%40agency\.test\?subject=/.test(mailHref) && mailHref.indexOf(inv.token) > 0, mailHref);
   await A.click('#invite-dlg button[value=close]');
   const B = await newUser(browser, { label: 'agent' });
-  await B.goto(BASE + '/?invite=' + inv.token);
+  await B.goto(BASE + '/app.html?invite=' + inv.token);
   check('invite link opens sign-up with a note', await B.isVisible('#f-signup') && await B.isVisible('#invite-note'));
   await signUp(B, 'Alex Agent', 'alex@agency.test', 'password456');
   const fb = await crmFrame(B);
@@ -129,14 +146,14 @@ const serverState = async (email, key) => (await db.query(
   await addContact(fb2, 'Kim Keen', '2 Bay Pde', 'Bay');
   await until(async () => (await B.evaluate(() => window.__shell.pending().length)) === 0);
   await B.evaluate(() => window.__shell.pushStats());
-  await B.goto(BASE + '/#team'); await crmFrame(B);
+  await B.goto(BASE + '/app.html#team'); await crmFrame(B);
   check('agent does not see the dashboard or invites', await B.isHidden('#dash') && await B.isHidden('#invite-box'));
   check('agent sees the team list', /Olivia Owner/.test(await B.textContent('#people')));
-  await B.goto(BASE + '/#billing'); await crmFrame(B);
+  await B.goto(BASE + '/app.html#billing'); await crmFrame(B);
   check('agent sees billing is managed by the owner', /managed by your team owner/.test(await B.textContent('#bill-card')));
 
   console.log('dashboard');
-  await A.goto(BASE + '/#team'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#team'); await crmFrame(A);
   await A.click('#team-refresh');
   const dash = await until(async () => { const t = await A.textContent('#dash-table'); return /Alex Agent/.test(t) && /Olivia Owner/.test(t) ? t : null; });
   check('owner sees each agent on the dashboard', !!dash, await A.textContent('#dash-table'));
@@ -152,7 +169,7 @@ const serverState = async (email, key) => (await db.query(
   check('owner makes the agent an admin', !!(await until(async () => (await db.query("select role from public.team_members m join auth.users u on u.id = m.user_id where u.email = 'alex@agency.test'")).rows[0].role === 'admin')));
 
   console.log('billing');
-  await A.goto(BASE + '/#billing'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#billing'); await crmFrame(A);
   check('billing shows price and trial', /\$100 AUD per agent/.test(await A.textContent('#bill-card')) && /Free trial/.test(await A.textContent('#bill-card')));
   if (SHOTS) await A.screenshot({ path: SHOTS + '/4-billing.png' });
   await A.click('[data-act=subscribe]');
@@ -160,11 +177,11 @@ const serverState = async (email, key) => (await db.query(
   check('after checkout the app shows Subscribed', !!(await until(async () => /Subscribed/.test(await A.textContent('#plan-chip')), 12000)), await A.textContent('#plan-chip'));
   const team = (await db.query("select t.* from public.teams t join public.team_members m on m.team_id = t.id join auth.users u on u.id = m.user_id where u.email = 'olivia@agency.test'")).rows[0];
   check('one seat per person bought', team.seats === 2, 'seats=' + team.seats);
-  await A.goto(BASE + '/#billing'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#billing'); await crmFrame(A);
   check('owner can change seats and manage billing', await A.isVisible('#seat-n') && await A.isVisible('[data-act=portal]'));
 
   console.log('help and support');
-  await A.goto(BASE + '/#help'); await crmFrame(A);
+  await A.goto(BASE + '/app.html#help'); await crmFrame(A);
   await A.selectOption('#f-support [name=topic]', 'problem'); await A.fill('#f-support [name=message]', 'The call list froze once.');
   await A.click('#f-support button[type=submit]');
   check('support message saved', !!(await until(async () => (await db.query("select 1 from public.support_requests where message like 'The call list froze%'")).rows.length)));
@@ -206,19 +223,19 @@ const serverState = async (email, key) => (await db.query(
   const mal = await (await fetch(BASE + '/auth/v1/signup', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: 'x' },
     body: JSON.stringify({ email: 'mallory@else.test', password: 'password123', data: { full_name: 'Mallory' } }) })).json();
   let nth = 0;
-  const link = (type) => BASE + '/?n=' + (++nth) + '#access_token=' + mal.access_token + '&refresh_token=' + mal.refresh_token + '&expires_in=3600&type=' + type;
+  const link = (type) => BASE + '/app.html?n=' + (++nth) + '#access_token=' + mal.access_token + '&refresh_token=' + mal.refresh_token + '&expires_in=3600&type=' + type;
   const V = await newUser(browser, { label: 'visitor' });
   await V.goto(link('signup'));
   check("a link from someone else's sign-up does not sign this browser in", !!(await until(() => V.isVisible('#f-signin'))) && !(await V.evaluate(() => localStorage.getItem('shell_session'))));
   check('…it just says the email is confirmed', /confirmed/.test(await V.textContent('#toast')));
-  await V.goto(BASE + '/'); await V.goto(link('recovery'));
+  await V.goto(BASE + '/app.html'); await V.goto(link('recovery'));
   check('a reset link from another browser asks for a new link instead', !!(await until(() => V.isVisible('#f-forgot'))) && !(await V.evaluate(() => localStorage.getItem('shell_session'))));
   const bId = await B.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id);
   await B.goto(link('signup'));
   await until(() => B.isVisible('#scr-app'));
   check('a link for another account never replaces the person signed in', (await B.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id)) === bId);
   check('…and says so', !!(await until(async () => /different account/.test(await B.textContent('#toast')))));
-  await V.goto(BASE + '/'); await V.evaluate(() => localStorage.setItem('shell_auth_started', String(Date.now())));
+  await V.goto(BASE + '/app.html'); await V.evaluate(() => localStorage.setItem('shell_auth_started', String(Date.now())));
   await V.goto(link('signup'));
   check('the link works in the browser where the sign-up started', !!(await crmFrame(V)) && (await V.evaluate(() => JSON.parse(localStorage.getItem('shell_session')).user.id)) === mal.user.id);
 
@@ -244,7 +261,7 @@ const serverState = async (email, key) => (await db.query(
   check('and the receipts kept in that browser are cleared', await V.evaluate(() => new Promise((ok) => { const r = indexedDB.open('crm_receipts'); r.onsuccess = () => { const has = r.result.objectStoreNames.contains('files'); r.result.close(); ok(!has); }; r.onerror = () => ok(true); })));
   check('the account is gone from the database', !(await db.query("select 1 from auth.users where email = 'mallory@else.test'")).rows.length);
   check('nothing of it is left on the device', (await V.evaluate(() => Object.keys(localStorage).filter((k) => /^crm_|^shell_(session|owner)$/.test(k)).length)) === 0);
-  await A.goto(BASE + '/'); await crmFrame(A);
+  await A.goto(BASE + '/app.html'); await crmFrame(A);
   await A.click('#menu-btn'); await A.click('#menu [data-act=delete-account]');
   await A.fill('#delete-confirm', 'DELETE'); await A.click('#delete-go');
   check('an owner with a team is told what to do first', !!(await until(async () => /own a team with other people/.test(await A.textContent('#delete-err')))));

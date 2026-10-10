@@ -2,7 +2,7 @@
   "name": "MICRM",
   "short_name": "MICRM",
   "description": "Prospecting CRM for real estate agents and agencies.",
-  "start_url": "./",
+  "start_url": "app.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
