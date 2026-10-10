@@ -25,7 +25,7 @@ You need three accounts: **Supabase** (database and logins), **Stripe** (payment
 ## 1. Supabase
 
 1. Create a project at supabase.com. Choose the **Sydney** region so client data stays in Australia.
-2. **Database:** open *SQL Editor*, paste in the whole of `supabase/migrations/20260928000000_subscriptions.sql`, and run it.
+2. **Database:** open *SQL Editor*, paste in the whole of `supabase/migrations/20260928000000_subscriptions.sql` and run it, then do the same with `supabase/migrations/20261009000000_receipts.sql` (in that order).
    (Or, with the Supabase CLI: `supabase link --project-ref <ref>` then `supabase db push`.)
 3. **Authentication → URL Configuration:** set *Site URL* to the app's address, e.g. `https://micrm.com.au/app.html`. Add the same address to *Redirect URLs*. (The front page is at `https://micrm.com.au/`; sign-up, confirmation and password emails all lead to the app.)
 4. **Authentication → Providers → Email:** keep *Confirm email* on.
