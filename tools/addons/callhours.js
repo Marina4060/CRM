@@ -5,11 +5,10 @@
    time where the person lives. Calls outside those times need the person's
    prior consent.
 
-   Tapping a phone number (a call link, or copying a number in the call list)
-   outside those hours asks first. The owner's time zone comes from their
+   Tapping a call link in the CRM outside those hours asks first (the Call
+   Runner is left as it is). The owner's time zone comes from their
    postcode when there is one (Broken Hill keeps South Australian time),
    otherwise from this device, in Australia, or else Perth.
-   The call list's top bar shows whether calls are allowed right now.
    Built in by tools/add_addons.py. */
 (function(){
   var PERTH = 'Australia/Perth';
@@ -101,10 +100,10 @@
     doc.getElementById('ch-no').focus();
   }
 
-  // a click on a call link (or a phone number to copy) in a document: check first
+  // a click on a call link in a document: check first
   function guard(doc, lookup){
     doc.addEventListener('click', function(e){
-      var t = e.target && e.target.closest && e.target.closest('a[href^="tel:"], button.numbtn');
+      var t = e.target && e.target.closest && e.target.closest('a[href^="tel:"]');
       if(!t || t.__chOk) return;
       var info = lookup(t) || {}, r = check(info.zone || null);
       if(r.ok) return;
@@ -119,37 +118,6 @@
     var c = data.filter(function(x){ return String(x.ph || '').replace(/\D/g, '').indexOf(dig) >= 0; })[0];
     return c ? { who: String(c.n || '').split(/\s*(?:&|and|,)\s*/)[0] || null, zone: zoneFor(c.pc || c.postcode) } : null;
   });
-
-  // the call list: check its calls too, and show the hours in its top bar
-  var _open = window.openCR;
-  if(typeof _open === 'function'){
-    window.openCR = function(){
-      var r = _open.apply(this, arguments), tries = 0;
-      (function hook(){
-        var f = document.getElementById('dcl-frame'), w = f && f.contentWindow, d = w && w.document;
-        if(d && d.body && !d.__chHooked && d.getElementById('rows')){
-          d.__chHooked = true;
-          guard(d, function(){
-            var c = null; try { c = w.eval('typeof cur === "function" ? cur() : null'); } catch (e) {}
-            return c ? { who: String(c.name || '').split(/\s*(?:&|and|,)\s*/)[0] || null, zone: zoneFor(c.postcode) } : null;
-          });
-          return;
-        }
-        if(++tries < 80) setTimeout(hook, 150);
-      })();
-      paintBar();
-      return r;
-    };
-  }
-  function paintBar(){
-    var bar = document.getElementById('dcl-bar'); if(!bar) return;
-    var el = document.getElementById('dcl-hours');
-    if(!el){ el = document.createElement('span'); el.id = 'dcl-hours'; el.style.cssText = 'padding:3px 10px;border-radius:20px;font-weight:600;font-size:12px'; var st = document.getElementById('dcl-status'); bar.insertBefore(el, st ? st.nextSibling : null); }
-    var r = check();
-    el.textContent = r.ok ? 'Calling hours: open until ' + r.until + ' (' + place(r.zone) + ')' : 'Outside calling hours (' + place(r.zone) + '). Next: ' + r.next;
-    el.style.background = r.ok ? '#DCFAE6' : '#FEE4E2'; el.style.color = r.ok ? '#085D3A' : '#912018';
-  }
-  setInterval(function(){ var w = document.getElementById('dcl-wrap'); if(w && w.style.display !== 'none') paintBar(); }, 30000);
 
   window.__callHours = { check: check, zoneFor: zoneFor, holiday: function(y, m, d){ return holiday({ y: y, m: m, d: d }); } };
 })();

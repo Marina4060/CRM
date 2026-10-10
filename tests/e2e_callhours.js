@@ -86,22 +86,19 @@ async function openCrm(b, when) {
   await s.f.click('#ch-go');
   check(await s.f.evaluate(() => window.__dialled === 1), 'They agreed to this call: the call goes ahead');
 
-  // the call list: hours in its top bar, and its numbers checked too
+  // the Call Runner is left alone: no hours in its bar, and its numbers aren't checked
   await s.f.evaluate(() => { document.querySelectorAll('[id$="-modal"]').forEach((e) => e.remove()); openCRContact(data.length - 1); });
   let cl = null;
   for (let i = 0; i < 60 && !cl; i++) {
     await s.p.clock.runFor(250);
     try { const h = await s.f.$('#dcl-frame'); const x = h && await h.contentFrame(); if (x && await x.evaluate(() => typeof cur === 'function' && !!cur() && !!document.querySelector('button.numbtn, a[href^="tel:"]'))) cl = x; } catch (e) {}
   }
-  check(/Outside calling hours \(Perth\)\. Next: tomorrow at 9am/.test(await s.f.textContent('#dcl-hours')), 'the call list’s top bar says calls aren’t allowed now', await s.f.textContent('#dcl-hours').catch(() => ''));
+  check(await s.f.evaluate(() => !document.getElementById('dcl-hours')), 'the Call Runner’s top bar has no calling-hours note');
   if (cl) {
-    check(await cl.evaluate(() => /Ann/.test(cur().name)), 'the call list opens on the contact');
     await cl.evaluate(() => { window.__copied = 0; const b = document.querySelector('button.numbtn') || document.querySelector('a[href^="tel:"]'); b.addEventListener('click', (e) => { e.preventDefault(); window.__copied++; }); b.click(); });
     await s.p.clock.runFor(200);
-    check(/Outside telemarketing calling hours/.test(await cl.evaluate(() => { const m = document.getElementById('ch-modal'); return m ? m.innerText : ''; })) && await cl.evaluate(() => window.__copied === 0), 'calling from the call list asks first too');
-    await cl.click('#ch-go');
-    check(await cl.evaluate(() => window.__copied === 1 && !document.getElementById('ch-modal')), '…and goes ahead once they agreed');
-  } else check(false, 'the call list opens on the contact');
+    check(await cl.evaluate(() => window.__copied === 1 && !document.getElementById('ch-modal')), 'calling from the Call Runner goes straight through');
+  } else check(false, 'the Call Runner opens on the contact');
   await s.ctx.close();
 
   check(errs.length === 0 && s.errs.length === 0, 'no script errors', errs.concat(s.errs));

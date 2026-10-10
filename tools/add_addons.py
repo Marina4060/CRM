@@ -7,7 +7,7 @@ Adds the add-on features from tools/addons/ just before </body>, between
 ADDONS markers, so running it again replaces them rather than adding a second
 copy: the Map view (map.js, with Leaflet bundled from vendor/), Vendor Reports
 (vendor_report.js), Buyers (buyers.js), the Call Runner's missing-details
-tools (callrunner.js), the telemarketing calling-hours check (callhours.js),
+tools (callrunner.js), the calling-hours check on call links (callhours.js),
 receipts on expenses (receipts.js), the professional colours (theme.css, theme.js) and the
 iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
 CRM itself (see FIXES), and lets the page reach the map's address finder in
