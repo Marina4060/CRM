@@ -112,6 +112,7 @@
         <div class="menu-who"><b id="menu-name"></b><span id="menu-email"></span><span id="menu-role" class="muted small"></span></div>
         <button data-act="rename-me">Change my name</button>
         <button data-act="export">Download my data</button>
+        <button data-act="download-app" hidden>Download MICRM for your desktop</button>
         <button data-act="install" id="menu-install" hidden>Install app on this device</button>
         <button data-act="signout">Sign out</button>
         <button data-act="delete-account" class="menu-danger">Delete my account</button>
@@ -174,6 +175,12 @@
           <p class="muted small">Or email <a id="support-mail" href="#"></a></p>
           <p class="muted small"><a href="terms.html" target="_blank">Terms of Service</a> · <a href="privacy.html" target="_blank">Privacy Policy</a></p>
           <div id="my-requests"></div>
+        </div>
+        <div class="card stack" id="desktop-card" hidden>
+          <h2>MICRM on your desktop</h2>
+          <p>Download MICRM as a single file and open it in your browser, even without internet. It comes with your trial or subscription.</p>
+          <p class="muted small">The desktop copy keeps its contacts in the browser you open it in, separate from your online account. Use its Backup button, and Import file to move data between them.</p>
+          <p><button class="btn primary" type="button" data-act="download-app">Download MICRM</button></p>
         </div>
         <div class="card stack faq">
           <h2>Common questions</h2>

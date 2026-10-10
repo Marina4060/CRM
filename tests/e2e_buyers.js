@@ -56,8 +56,9 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR
   await f.evaluate(() => dclClose());
 
   // ───────── Buyers ─────────
+  await f.evaluate(() => { buyers.push({ name: 'Old Style', ph: '', em: '', type: 'Any', beds: 'Any', budget: '', status: 'Active', note: 'added by another part of the CRM' }); });
   await f.click('.topbar [onclick="openBuyers()"]'); await sleep(300);
-  check(await f.isVisible('#by-wrap'), 'Buyers button opens the Buyers window');
+  check(await f.isVisible('#by-wrap') && /Old Style/.test(await f.evaluate(() => { byTab('all'); const t = document.getElementById('by-body').textContent; byTab('qualified'); return t; })), 'Buyers button opens the Buyers window, including a buyer added elsewhere in the CRM');
   check(/1 open home visitor not in your buyers yet/.test(await f.textContent('#by-body')), 'offers the open home visitor who isn’t a buyer yet');
   await f.evaluate(() => byAddVisitors()); await sleep(200);
   let pat = await f.evaluate(() => buyers.find((x) => x.name === 'Pat Visitor'));

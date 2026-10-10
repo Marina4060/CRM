@@ -53,6 +53,7 @@
 
   // ── the properties a buyer can be tagged to ──
   function properties(){
+    buyers.forEach(tidy);   // buyers can also be added elsewhere in the CRM, without the newer fields
     var out = [], seen = {};
     function add(a, src){ a = String(a || '').trim(); var k = addrKey(a); if(!k || seen[k]) return; seen[k] = 1; out.push({ a: a, src: src }); }
     data.forEach(function(c){ if(c.stage === 'listed' && c.a) add(c.a, 'listed'); });
@@ -93,6 +94,7 @@
 
   // ── is this buyer qualified? ──
   function evaluate(b){
+    tidy(b);
     var c = [], score = 0;
     var contact = hasPh(b) || hasEm(b), budget = budgetNum(b.budget) > 0;
     var finOk = b.finance === 'Pre-approved' || b.finance === 'Cash buyer', finPart = b.finance === 'Seeing a broker';
@@ -194,6 +196,7 @@
   window.closeBuyers = function(){ wrap.style.display = 'none'; var old = document.getElementById('buyers-wrap'); if(old) old.style.display = 'none'; };
 
   function list(){
+    buyers.forEach(tidy);
     return buyers.map(function(b){ return { b: b, e: evaluate(b) }; }).filter(function(x){
       if(prop && !x.b.tags.some(function(t){ return sameAddr(t, prop); })) return false;
       if(q){ var hay = (x.b.name + ' ' + x.b.ph + ' ' + x.b.em + ' ' + x.b.tags.join(' ') + ' ' + (x.b.note || '')).toLowerCase(); if(hay.indexOf(q) < 0) return false; }
@@ -328,6 +331,6 @@
   // for the vendor report, the map and tests
   window.__buyers = {
     evaluate: evaluate, learn: learn, addNote: function(b, t){ var r = addNote(tidy(b), t); save(); return r; },
-    forProperty: function(a){ var l = buyers.filter(function(b){ return b.tags.some(function(t){ return sameAddr(t, a); }); }); return { all: l.length, qualified: l.filter(function(b){ var e = evaluate(b); return e.active && e.qualified; }).length }; }
+    forProperty: function(a){ buyers.forEach(tidy); var l = buyers.filter(function(b){ return b.tags.some(function(t){ return sameAddr(t, a); }); }); return { all: l.length, qualified: l.filter(function(b){ var e = evaluate(b); return e.active && e.qualified; }).length }; }
   };
 })();

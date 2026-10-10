@@ -3630,7 +3630,7 @@ function scrollToLane(key){
 }
 function render() {
   var vis = getVisible();
-  var cnt = {hot:0,warm:0,potential:0,appraisal:0,msg:0,cold:0,declined:0};
+  var cnt = {hot:0,warm:0,potential:0,appraisal:0,msg:0,cold:0,declined:0,listed:0,sold:0};
   vis.forEach(function(c){if(cnt[c.stage]!==undefined)cnt[c.stage]++;});
   var tot = vis.length;
   document.getElementById('summary').innerHTML =
@@ -11573,6 +11573,11 @@ body{background:var(--crm-canvas)}
 .cr-progress-bar{background:var(--crm-accent) !important}
 .cr-note-prev{background:#F9FAFB !important;border:1px solid var(--crm-line)}
 
+/* street labels on cards: beside the name when there is room, on their own line when not */
+.card-top{flex-wrap:wrap;gap:4px 6px}
+.card-name{flex:1 1 9em;min-width:0}
+.card-top > span{flex:0 0 auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px !important;line-height:1.3;padding:2px 8px !important}
+
 /* ══ iPhone fit ══
    Safari on iPhone widens the whole page to fit anything drawn past the edge
    of the screen, even a closed panel parked off to the side. Then the CRM only
@@ -12361,6 +12366,7 @@ window.CRM_LEAFLET = L.noConflict();
 
   // ── the properties a buyer can be tagged to ──
   function properties(){
+    buyers.forEach(tidy);   // buyers can also be added elsewhere in the CRM, without the newer fields
     var out = [], seen = {};
     function add(a, src){ a = String(a || '').trim(); var k = addrKey(a); if(!k || seen[k]) return; seen[k] = 1; out.push({ a: a, src: src }); }
     data.forEach(function(c){ if(c.stage === 'listed' && c.a) add(c.a, 'listed'); });
@@ -12401,6 +12407,7 @@ window.CRM_LEAFLET = L.noConflict();
 
   // ── is this buyer qualified? ──
   function evaluate(b){
+    tidy(b);
     var c = [], score = 0;
     var contact = hasPh(b) || hasEm(b), budget = budgetNum(b.budget) > 0;
     var finOk = b.finance === 'Pre-approved' || b.finance === 'Cash buyer', finPart = b.finance === 'Seeing a broker';
@@ -12502,6 +12509,7 @@ window.CRM_LEAFLET = L.noConflict();
   window.closeBuyers = function(){ wrap.style.display = 'none'; var old = document.getElementById('buyers-wrap'); if(old) old.style.display = 'none'; };
 
   function list(){
+    buyers.forEach(tidy);
     return buyers.map(function(b){ return { b: b, e: evaluate(b) }; }).filter(function(x){
       if(prop && !x.b.tags.some(function(t){ return sameAddr(t, prop); })) return false;
       if(q){ var hay = (x.b.name + ' ' + x.b.ph + ' ' + x.b.em + ' ' + x.b.tags.join(' ') + ' ' + (x.b.note || '')).toLowerCase(); if(hay.indexOf(q) < 0) return false; }
@@ -12636,7 +12644,7 @@ window.CRM_LEAFLET = L.noConflict();
   // for the vendor report, the map and tests
   window.__buyers = {
     evaluate: evaluate, learn: learn, addNote: function(b, t){ var r = addNote(tidy(b), t); save(); return r; },
-    forProperty: function(a){ var l = buyers.filter(function(b){ return b.tags.some(function(t){ return sameAddr(t, a); }); }); return { all: l.length, qualified: l.filter(function(b){ var e = evaluate(b); return e.active && e.qualified; }).length }; }
+    forProperty: function(a){ buyers.forEach(tidy); var l = buyers.filter(function(b){ return b.tags.some(function(t){ return sameAddr(t, a); }); }); return { all: l.length, qualified: l.filter(function(b){ var e = evaluate(b); return e.active && e.qualified; }).length }; }
   };
 })();
 

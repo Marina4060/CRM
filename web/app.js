@@ -735,6 +735,8 @@
     $('#menu-name').textContent = ctx.user.full_name || 'No name yet';
     $('#menu-email').textContent = ctx.user.email || '';
     $('#menu-role').textContent = roleName(ctx.role) + (t.name ? ' · ' + t.name : '');
+    $$('[data-act="download-app"]').forEach(function (el) { el.hidden = !ctx.access; });
+    var dc = $('#desktop-card'); if (dc) dc.hidden = !ctx.access;
     var chip = $('#plan-chip');
     if (ctx.offline) { chip.textContent = 'Offline'; chip.className = 'chip warn'; }
     else if (t.subscription_status === 'past_due') { chip.textContent = 'Payment failed'; chip.className = 'chip bad'; }
@@ -1085,6 +1087,7 @@
     var a = b.getAttribute('data-act');
     if (a === 'signout') signOut();
     else if (a === 'export') exportData();
+    else if (a === 'download-app') downloadApp(b);
     else if (a === 'delete-account') openDelete();
     else if (a === 'subscribe') goStripe('create-checkout', { plan: ctx.team.plan });
     else if (a === 'share-mine') {
@@ -1139,6 +1142,20 @@
     }).then(function () { b.textContent = 'Delete my account'; });
   });
 
+  // MICRM for the desktop: the same CRM as one file, for people on a trial or a paid plan.
+  // It keeps its data in the browser it is opened in, separate from the online account.
+  function downloadApp(btn) {
+    if (!ctx || !ctx.access) { toast('The desktop version comes with a trial or a subscription.'); return; }
+    if (btn) btn.disabled = true;
+    fetchApp().then(function (html) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      a.download = (C.appName || 'MICRM') + '.html';
+      document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      toast('Downloaded. Double-click ' + a.download + ' to open it in your browser.', 6000);
+    }).catch(function (e) { toast(e.message || 'The download didn\u2019t work. Please try again.', 6000); })
+      .then(function () { if (btn) btn.disabled = false; });
+  }
   function exportData() {
     var done = function (rows) {
       var out = { exported_at: new Date().toISOString(), account: ctx && ctx.user && ctx.user.email, data: {} };
@@ -1189,7 +1206,7 @@
   if (r.error) showAuth(r.form || 'signin', r.error);
   else if (r.type === 'recovery' && session) showAuth('newpass');
   else if (session) start();
-  else showAuth(new URLSearchParams(location.search).get('invite') ? 'signup' : 'signin');
+  else { var q0 = new URLSearchParams(location.search); showAuth(q0.get('invite') || q0.get('start') === 'signup' ? 'signup' : 'signin'); }   // the front page links to ?start=signup
   if (r.notice) toast(r.notice, 8000);
 
   // for tests

@@ -61,6 +61,9 @@ FIXES = [
     ('<div id="buyers-table-wrap"><table class="exp-table">', '<table class="exp-table">'),
     ('<div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>',
      '<div id="buyers-table-wrap"><div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>'),
+    # the summary tiles counted every stage except Listed and Sold, which always showed 0
+    ('var cnt = {hot:0,warm:0,potential:0,appraisal:0,msg:0,cold:0,declined:0};',
+     'var cnt = {hot:0,warm:0,potential:0,appraisal:0,msg:0,cold:0,declined:0,listed:0,sold:0};'),
     # leftovers of the original agency in the AI assistant: sign off as the agent
     ("Sign off as M&I team.';", "Sign off as '+ME.name+', '+ME.agency+'.';"),
     ('M&amp;I AI assistant', 'MICRM AI assistant'),
