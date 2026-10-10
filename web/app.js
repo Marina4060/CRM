@@ -15,14 +15,22 @@
   var OFFLINE_GRACE_MS = 3 * 24 * 3600 * 1000;   // keep working offline this long after the last check
   var APP_CACHE = 'crm-app-v1';
 
+  // prices always show the total a customer pays, GST included where it applies (Australian Consumer Law)
+  var GST_MODE = String((C.legal && C.legal.gst) || '').toLowerCase();
+  function aud(ex) {
+    var n = /plus|\+|excl/.test(GST_MODE) ? Math.round(ex * 110) / 100 : ex;
+    return '$' + n.toLocaleString('en-AU', { minimumFractionDigits: n % 1 ? 2 : 0 }) + ' AUD';
+  }
+  var GST_NOTE = !GST_MODE || /no gst|not registered/.test(GST_MODE) ? '' : ' incl. GST';
   var PLANS = C.plans || [
-    { id: 'per_user', name: 'Per agent', price: '$100 AUD per agent / month', people: 'Any number of agents', shared: false,
+    { id: 'per_user', name: 'Per agent', price: aud(100) + ' per agent / month' + GST_NOTE, people: 'Any number of agents', shared: false,
       blurb: 'Each agent keeps their own private contacts.' },
-    { id: 'agency_10', name: 'Agency 10', price: '$500 AUD / month', people: 'Up to 10 people', shared: true,
+    { id: 'agency_10', name: 'Agency 10', price: aud(500) + ' / month' + GST_NOTE, people: 'Up to 10 people', shared: true,
       blurb: 'One shared contact list the whole agency sees and works.' },
-    { id: 'agency_20', name: 'Agency 20', price: '$1000 AUD / month', people: 'Up to 20 people', shared: true,
+    { id: 'agency_20', name: 'Agency 20', price: aud(1000) + ' / month' + GST_NOTE, people: 'Up to 20 people', shared: true,
       blurb: 'One shared contact list the whole agency sees and works.' }
   ];
+  C.priceLabel = C.priceLabel || 'from ' + aud(100) + ' per agent per month' + GST_NOTE;
   function planInfo(id) { return PLANS.filter(function (p) { return p.id === id; })[0] || PLANS[0]; }
   var ctx = null;         // from app_context(): user, role, team, access
   var session = null;     // {access_token, refresh_token, expires_at, user:{id,email}}

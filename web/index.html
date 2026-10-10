@@ -8,10 +8,13 @@
 <meta name="theme-color" content="#1F3A5F">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,700;112,800;125,800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
+/* fonts are served from this site (no third-party font service sees visitors); SIL Open Font Licence, see fonts/ */
+@font-face{font-family:'Archivo';src:url(fonts/archivo-latin-wdth-normal.woff2) format('woff2');font-weight:100 900;font-stretch:62% 125%;font-display:swap}
+@font-face{font-family:'Instrument Sans';src:url(fonts/instrument-sans-latin-400-normal.woff2) format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'Instrument Sans';src:url(fonts/instrument-sans-latin-500-normal.woff2) format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Instrument Sans';src:url(fonts/instrument-sans-latin-600-normal.woff2) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format('woff2');font-weight:500;font-display:swap}
 /* Layout: a signboard headline beside the live board, then the funnel strip every contact moves through,
    then the work of an agent's week in order (prospect, call, buyers, vendors, books), plans, questions. */
 :root{
@@ -126,7 +129,10 @@ section.block{padding-block:clamp(56px,8vw,96px)}
 .plan ul li::before{content:"\2713";color:var(--list);font-weight:700;margin-right:8px}
 .plan .btn{margin-top:auto}
 .pill{align-self:flex-start;font:500 .75rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
-.fine{margin-top:16px;color:var(--muted);font-size:.92rem}
+.terms-box{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;display:grid;gap:8px;font-size:.95rem;color:var(--muted)}
+.terms-box b{color:var(--ink)}
+.terms-box ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.shot-note{margin-top:10px;color:var(--muted);font-size:.85rem}
 
 /* trust */
 .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
@@ -187,6 +193,7 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
         <img src="img/board.jpg" alt="The MICRM funnel board: contacts in Scarborough, Doubleview and Karrinyup sorted into Hot, Warm, No answer, Appraised, Message left, Cold, Declined, Listed and Sold." width="2160" height="1350">
       </div>
       <div class="sold" aria-hidden="true">SOLD</div>
+      <p class="shot-note">Screenshots show sample data. Names and details are made up.</p>
     </div>
   </div>
 
@@ -272,7 +279,7 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
         <div class="ways">
           <div class="way"><b>Online</b><span>Sign in from any browser. Add it to your iPhone or Android home screen like an app.</span></div>
           <div class="way"><b>Desktop</b><span>Download MICRM to your computer and open it even without internet. Included with your trial and subscription.</span></div>
-          <div class="way"><b>Backed up</b><span>Your data is saved online in Sydney, so a lost phone never means lost contacts.</span></div>
+          <div class="way"><b>Backed up</b><span>Your online account is saved in Sydney, so losing your phone doesn't lose your contacts.</span></div>
         </div>
       </div>
       <div class="phone"><img src="img/phone.jpg" alt="MICRM on a phone, showing Hot and Warm contacts in Scarborough and Doubleview." width="780" height="1688" loading="lazy"></div>
@@ -289,37 +296,65 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
       <div class="plans">
         <div class="plan">
           <p class="label">Per agent</p>
-          <p class="price">$100<span>per agent / month</span></p>
+          <p class="price" data-ex="100">$100<span>per agent / month</span></p>
           <ul><li>Every feature</li><li>Each agent's contacts are private</li><li>Team dashboard shows counts only</li><li>Desktop download</li></ul>
           <a class="btn btn-ghost" href="app.html?start=signup">Start free trial</a>
         </div>
         <div class="plan pick">
           <span class="pill">For offices</span>
           <p class="label">Agency 10</p>
-          <p class="price">$500<span>per month</span></p>
+          <p class="price" data-ex="500">$500<span>per month</span></p>
           <ul><li>Up to 10 people</li><li>One shared contact list for the office</li><li>Each agent's calls, texts and notes recorded</li><li>Desktop download</li></ul>
           <a class="btn btn-primary" href="app.html?start=signup">Start free trial</a>
         </div>
         <div class="plan">
           <p class="label">Agency 20</p>
-          <p class="price">$1,000<span>per month</span></p>
+          <p class="price" data-ex="1000">$1,000<span>per month</span></p>
           <ul><li>Up to 20 people</li><li>One shared contact list for the office</li><li>Owner, admin and agent roles</li><li>Desktop download</li></ul>
           <a class="btn btn-ghost" href="app.html?start=signup">Start free trial</a>
         </div>
       </div>
-      <p class="fine">Prices are in Australian dollars and <span id="gst-note">include GST</span>. Paid monthly by card through Stripe.</p>
+      <div class="terms-box">
+        <p><b>Prices are in Australian dollars and <span id="gst-note">include GST</span>.</b> Each price shown is the total you pay.</p>
+        <ul>
+          <li>The free trial never charges you. When it ends, you choose whether to subscribe.</li>
+          <li>Subscriptions are paid monthly in advance by card through Stripe and renew each month until you cancel.</li>
+          <li>Cancel any time under Billing. You keep access until the end of the month you have paid for.</li>
+          <li>We give at least 30 days' notice by email before any price change.</li>
+          <li>Nothing in our terms takes away your rights under the Australian Consumer Law. Read the full <a href="terms.html">Terms of Service</a>.</li>
+        </ul>
+      </div>
     </div>
   </section>
 
   <section class="block" aria-labelledby="trust-title" style="padding-top:0">
     <div class="wrap">
-      <div class="section-head"><p class="label">Your data</p><h2 id="trust-title">Your clients' details stay in Australia</h2></div>
+      <div class="section-head"><p class="label">Your data</p><h2 id="trust-title">Your clients' details are stored in Australia</h2></div>
       <div class="facts">
-        <div class="fact"><b>Stored in Sydney</b><span>Your contacts and receipts are kept in an Australian data centre.</span></div>
-        <div class="fact"><b>Never sold</b><span>Your data is yours. We don't use advertising trackers.</span></div>
+        <div class="fact"><b>Stored in Sydney</b><span>Your contacts, notes and receipts are kept in an Australian data centre. Card payments, the map and the optional AI assistant use overseas providers; our <a href="privacy.html">Privacy Policy</a> lists what each one receives.</span></div>
+        <div class="fact"><b>Never sold</b><span>Your data is yours. We don't sell it, use it to market to your clients, or use advertising trackers.</span></div>
         <div class="fact"><b>Private by default</b><span>Other agents never see your contacts unless your office shares a list.</span></div>
-        <div class="fact"><b>Take it with you</b><span>Download all your data at any time, even after you stop subscribing.</span></div>
+        <div class="fact"><b>Take it with you</b><span>Download all your data at any time, and for 90 days after you stop subscribing.</span></div>
       </div>
+    </div>
+  </section>
+
+  <section class="block" id="rules" aria-labelledby="rules-title" style="padding-top:0">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="label">The rules you prospect under</p>
+        <h2 id="rules-title">Built for Australian agents, with Western Australia in mind</h2>
+        <p class="lede">MICRM helps you keep good records, but you stay responsible for following the law when you call, text or email. These are the main rules to know.</p>
+      </div>
+      <div class="grid">
+        <div class="tile"><h3>Do Not Call Register</h3><p>Before cold calling, check numbers against the Do Not Call Register unless you have the person's consent. MICRM lets you mark people as Do not call and shows it on their card and in your call list, but it does not check numbers against the Register for you.</p></div>
+        <div class="tile"><h3>Calling hours</h3><p>Telemarketing calls can be made on weekdays from 9am to 8pm and on Saturdays from 9am to 5pm, and not on Sundays, in the time where the person lives. For owners in Western Australia that is Perth time.</p></div>
+        <div class="tile"><h3>SMS and email</h3><p>Under the Spam Act 2003, marketing messages need the person's consent, must say who you are and must offer a working way to unsubscribe. MICRM signs your templates with your details; add your unsubscribe wording to each template.</p></div>
+        <div class="tile"><h3>Privacy</h3><p>Handle owners' and buyers' details under the Privacy Act 1988 and the Australian Privacy Principles where they apply to you. Buyer scores in MICRM are a guide for you only; they make no decisions on their own.</p></div>
+        <div class="tile"><h3>Western Australian agents</h3><p>Licensed agents and sales representatives in WA work under the Real Estate and Business Agents Act 1978 and the Real Estate and Business Agents and Sales Representatives Code of Conduct 2016, which among other things requires passing every offer, including verbal offers, to the seller.</p></div>
+        <div class="tile"><h3>Property data</h3><p>Only import owner lists you are licensed to use, such as under your CoreLogic RP Data subscription, and remove people who ask you to.</p></div>
+      </div>
+      <p class="shot-note">This is general information, not legal advice. Check the Australian Communications and Media Authority (acma.gov.au), the OAIC (oaic.gov.au) and Consumer Protection WA (consumerprotection.wa.gov.au) for the current rules.</p>
     </div>
   </section>
 
@@ -332,6 +367,7 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
         <details><summary>How does the desktop download work?</summary><p>While you are on the trial or subscribed, open Help in MICRM and choose Download MICRM. It saves one file to your computer that opens in your browser, even without internet. The desktop copy keeps its data on that computer, so use Backup to move data between it and your online account.</p></details>
         <details><summary>Does it work on iPhone and Android?</summary><p>Yes. Open MICRM in Safari or Chrome and add it to your home screen. It fits phone screens and syncs with your computer.</p></details>
         <details><summary>Can my whole office use it?</summary><p>Yes. Choose Agency 10 or Agency 20 and everyone works from one shared contact list. On the Per agent plan each agent's contacts stay private.</p></details>
+        <details><summary>Does MICRM check the Do Not Call Register?</summary><p>No. MICRM stores the Do not call status you give each person and shows it wherever you see them, but it does not check numbers against the Register. Wash your lists through the Register (see donotcall.gov.au) before calling people you don't have consent from.</p></details>
         <details><summary>What happens to my data if I stop?</summary><p>You can still sign in and download everything. After 90 days your data is deleted, as our privacy policy explains.</p></details>
       </div>
     </div>
@@ -348,9 +384,10 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
 
 <footer>
   <div class="wrap foot">
-    <span>&copy; <span id="year">2026</span> <span id="biz" data-fill="app">MICRM</span></span>
+    <span>&copy; <span id="year">2026</span> <span id="biz" data-fill="app">MICRM</span><span id="abn"></span></span>
     <a href="terms.html">Terms of Service</a>
     <a href="privacy.html">Privacy Policy</a>
+    <a href="#rules">Rules for agents</a>
     <span>Support: <a id="support" href="mailto:support@example.com">support@example.com</a></span>
   </div>
 </footer>
@@ -364,7 +401,14 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
     if (C.appName) [].forEach.call(document.querySelectorAll('[data-fill="app"]'), function (el) { el.textContent = C.appName; });
     if (L.businessName && !/^\[/.test(L.businessName)) document.getElementById('biz').textContent = L.businessName;
     if (C.supportEmail) { var s = document.getElementById('support'); s.textContent = C.supportEmail; s.href = 'mailto:' + C.supportEmail; }
-    if (L.gst) document.getElementById('gst-note').textContent = L.gst;
+    // prices always show the total a customer pays (Australian Consumer Law, single price)
+    var gst = String(L.gst || '').toLowerCase(), plus = /plus|\+|excl/.test(gst), none = !gst || /no gst|not registered/.test(gst);
+    document.getElementById('gst-note').textContent = none ? 'no GST is charged' : 'include GST';
+    if (plus) [].forEach.call(document.querySelectorAll('.price[data-ex]'), function (el) {
+      var ex = +el.getAttribute('data-ex'), inc = Math.round(ex * 110) / 100, unit = el.querySelector('span').outerHTML;
+      el.innerHTML = '$' + inc.toLocaleString('en-AU', { minimumFractionDigits: inc % 1 ? 2 : 0 }) + unit;
+    });
+    if (L.abn && !/^\[/.test(L.abn)) document.getElementById('abn').textContent = ' \u00b7 ABN ' + L.abn;
   } catch (e) {}
 })();
 </script>
