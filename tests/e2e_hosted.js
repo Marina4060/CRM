@@ -46,11 +46,21 @@ const serverState = async (email, key) => (await db.query(
   await F.goto(BASE + '/');
   check('the front page opens at the site address', /Every street/.test(await F.textContent('h1')));
   check('…with the plans and prices', /\$100/.test(await F.textContent('#pricing')) && /\$500/.test(await F.textContent('#pricing')) && /\$1,000/.test(await F.textContent('#pricing')));
-  await F.click('header .btn-primary');
-  check('Start free trial opens the sign-up form', !!(await until(() => F.isVisible('#f-signup'))) && /app\.html/.test(F.url()));
-  await F.goto(BASE + '/'); await F.click('header .signin');
-  check('Sign in opens the sign-in form', !!(await until(() => F.isVisible('#f-signin'))));
+  await F.click('header .download');
+  check('Download app asks the visitor to sign up or sign in first', !!(await until(() => F.isVisible('#f-signup'))) && /start=download/.test(F.url()) && await F.isVisible('#download-note'));
+  await signUp(F, 'Dana Download', 'dana@download.test', 'password123');
+  await until(() => F.isVisible('#scr-app'));
+  check('…then goes straight to the desktop download', !!(await until(async () => /#help$/.test(F.url()) && await F.isVisible('#desktop-card [data-act="download-app"]'))));
+  const dlx = F.waitForEvent('download'); await F.click('#desktop-card [data-act="download-app"]');
+  check('…which saves MICRM.html', (await dlx).suggestedFilename() === 'MICRM.html');
   await F.context().close();
+  const F2 = await newUser(browser, { label: 'visitor2' });
+  await F2.goto(BASE + '/');
+  await F2.click('header .btn-primary');
+  check('Start free trial opens the sign-up form', !!(await until(() => F2.isVisible('#f-signup'))) && /app\.html/.test(F2.url()));
+  await F2.goto(BASE + '/'); await F2.click('header .signin');
+  check('Sign in opens the sign-in form', !!(await until(() => F2.isVisible('#f-signin'))));
+  await F2.context().close();
 
   console.log('owner signs up and starts a trial');
   const A = await newUser(browser, { label: 'owner' });

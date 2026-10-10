@@ -72,12 +72,15 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;backgroun
 .nav-links a{text-decoration:none;color:var(--muted)}
 .nav-links a:hover{color:var(--ink)}
 .nav .btn{padding:.6em 1.05em;font-size:.95rem}
-@media (max-width:820px){.nav-links{display:none}.nav .signin{margin-left:auto}}
+@media (max-width:820px){.nav-links{display:none}.nav .download{margin-left:auto}}
+@media (max-width:520px){.nav .download{display:none}.nav .signin{margin-left:auto}}
 
 /* hero */
 .hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(28px,4vw,56px);align-items:center;padding-block:clamp(40px,7vw,84px) clamp(28px,4vw,48px)}
 .hero-copy{display:grid;gap:22px;min-width:0}
 .hero small{color:var(--muted);font-size:.92rem}
+.devices .btn-row{margin-top:24px}
+.devices small{display:block;margin-top:10px;color:var(--muted);font-size:.92rem}
 .shot{position:relative;min-width:0}
 .frame{border-radius:14px;overflow:hidden;border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow)}
 .frame .bar{display:flex;gap:6px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--card)}
@@ -170,6 +173,7 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
       <a href="#pricing">Pricing</a>
       <a href="#questions">Questions</a>
     </nav>
+    <a class="btn btn-ghost download" href="app.html?start=download">Download app</a>
     <a class="btn btn-ghost signin" href="app.html">Sign in</a>
     <a class="btn btn-primary" href="app.html?start=signup">Start free trial</a>
   </div>
@@ -281,6 +285,11 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
           <div class="way"><b>Desktop</b><span>Download MICRM to your computer and open it even without internet. Included with your trial and subscription.</span></div>
           <div class="way"><b>Backed up</b><span>Your online account is saved in Sydney, so losing your phone doesn't lose your contacts.</span></div>
         </div>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="app.html?start=download">Download MICRM</a>
+          <a class="btn btn-ghost" href="app.html?start=signup">Use it online</a>
+        </div>
+        <small>Windows or Mac. Sign up for the free trial, or sign in, and you’ll go straight to the download.</small>
       </div>
       <div class="phone"><img src="img/phone.jpg" alt="MICRM on a phone, showing Hot and Warm contacts in Scarborough and Doubleview." width="780" height="1688" loading="lazy"></div>
     </div>
@@ -363,7 +372,7 @@ footer{padding-block:40px 56px;color:var(--muted);font-size:.92rem}
       <div class="faq">
         <details><summary>Do I need a card for the free trial?</summary><p>No. Sign up with your email and use everything for 14 days. You only add a card if you decide to subscribe.</p></details>
         <details><summary>Can I bring in my RP Data lists?</summary><p>Yes. Paste or import your RP Data owner lists and MICRM sorts them into suburbs and streets for you.</p></details>
-        <details><summary>How does the desktop download work?</summary><p>While you are on the trial or subscribed, open Help in MICRM and choose Download MICRM. It saves one file to your computer that opens in your browser, even without internet. The desktop copy keeps its data on that computer, so use Backup to move data between it and your online account.</p></details>
+        <details><summary>How does the desktop download work?</summary><p>While you are on the trial or subscribed, tap <a href="app.html?start=download">Download app</a> at the top of this page (or open Help in MICRM) and choose Download MICRM. It saves one file to your computer that opens in your browser, even without internet. The desktop copy keeps its data on that computer, so use Backup to move data between it and your online account.</p></details>
         <details><summary>Does it work on iPhone and Android?</summary><p>Yes. Open MICRM in Safari or Chrome and add it to your home screen. It fits phone screens and syncs with your computer.</p></details>
         <details><summary>Can my whole office use it?</summary><p>Yes. Choose Agency 10 or Agency 20 and everyone works from one shared contact list. On the Per agent plan each agent's contacts stay private.</p></details>
         <details><summary>Does MICRM check the Do Not Call Register?</summary><p>No. MICRM stores the Do not call status you give each person and shows it wherever you see them, but it does not check numbers against the Register. Wash your lists through the Register (see donotcall.gov.au) before calling people you don't have consent from.</p></details>

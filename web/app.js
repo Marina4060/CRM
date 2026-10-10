@@ -148,6 +148,7 @@
     var inv = sessionStorage.getItem('invite');
     $('#invite-note').hidden = !inv;
     $('#invite-note').textContent = "You've been invited to join a team. Sign in or create an account with the email address the invite was sent to.";
+    $('#download-note').hidden = !!inv || !sessionStorage.getItem('want_download') || (which !== 'signup' && which !== 'signin');
   }
 
   function authSetup() {
@@ -647,13 +648,26 @@
     paintChrome();
     setSync(pending.length ? 'busy' : 'ok', isShared() ? 'Synced · shared' : null);
     if (pending.length) flush();
+    if (sessionStorage.getItem('want_download')) location.hash = ctx.access ? '#help' : '#billing';
     route();
+    offerDownload();
     return loadCrm().then(function () {
       pushStats();
       handleCheckoutReturn();
       maybeShowInstallHint();
       offerInvite();
     });
+  }
+
+  // came from the website's Download button: show the desktop download (or, without a trial or subscription, how to get one)
+  function offerDownload() {
+    if (!sessionStorage.getItem('want_download')) return;
+    sessionStorage.removeItem('want_download');
+    if (!ctx.access) { toast('The desktop download comes with a trial or a subscription.', 6000); return; }
+    var dc = $('#desktop-card'); if (!dc) return;
+    dc.scrollIntoView({ block: 'center' }); dc.classList.add('flash');
+    setTimeout(function () { dc.classList.remove('flash'); }, 4000);
+    toast('Tap Download MICRM to save it to your computer.', 6000);
   }
 
   // ─────────────── the CRM itself ───────────────
@@ -1209,12 +1223,13 @@
     show('scr-loading'); $('#loading-msg').textContent = 'This site is not connected to its database yet (see web/config.js).';
     return;
   }
+  if (new URLSearchParams(location.search).get('start') === 'download') sessionStorage.setItem('want_download', '1');   // the website's Download button
   var r = readAuthRedirect();
   session = session || lsGet(S_SESSION, null);
   if (r.error) showAuth(r.form || 'signin', r.error);
   else if (r.type === 'recovery' && session) showAuth('newpass');
   else if (session) start();
-  else { var q0 = new URLSearchParams(location.search); showAuth(q0.get('invite') || q0.get('start') === 'signup' ? 'signup' : 'signin'); }   // the front page links to ?start=signup
+  else { var q0 = new URLSearchParams(location.search); showAuth(q0.get('invite') || q0.get('start') === 'signup' || q0.get('start') === 'download' ? 'signup' : 'signin'); }   // the front page links to ?start=signup and ?start=download
   if (r.notice) toast(r.notice, 8000);
 
   // for tests

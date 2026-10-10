@@ -158,7 +158,7 @@ On a machine with PostgreSQL 16 and Node:
 # the database rules (96 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (70 + 38 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (73 + 38 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!

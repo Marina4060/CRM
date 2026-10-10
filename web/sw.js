@@ -1,6 +1,6 @@
 // Lets the app (app.html) and the front page (index.html) open without a connection. Only the app's own files are
 // cached here; account data and the CRM itself are handled by app.js.
-var VERSION = 'shell-v3';
+var VERSION = 'shell-v4';
 var FILES = ['app.html', 'index.html', 'app.js', 'styles.css', 'config.js', 'manifest.webmanifest',
   'terms.html', 'privacy.html', 'legal.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
