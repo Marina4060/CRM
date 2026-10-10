@@ -1,0 +1,25 @@
+# Only the settings this project changes; `supabase init` fills in the rest
+# if you want to run it locally.
+
+[functions.create-checkout]
+verify_jwt = true
+
+[functions.billing-portal]
+verify_jwt = true
+
+# Stripe calls this one directly; it checks Stripe's signature instead
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.set-seats]
+verify_jwt = true
+
+[functions.change-plan]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+# called on a schedule with the service role key, which it checks itself
+[functions.purge-receipts]
+verify_jwt = false
