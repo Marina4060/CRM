@@ -246,8 +246,8 @@ http.createServer(async (req, res) => {
     if (url.pathname === '/__test/portal') return send(res, 200, '<h1>Stripe billing portal (test)</h1>', 'text/html');
     if (url.pathname === '/config.js') {
       return send(res, 200, fs.readFileSync(path.join(WEB, 'config.js'), 'utf8')
-        .replace("'https://YOUR-PROJECT.supabase.co'", JSON.stringify('http://localhost:' + PORT))
-        .replace("'YOUR-ANON-KEY'", "'test-anon-key'"), 'application/javascript');
+        .replace(/supabaseUrl: '[^']*'/, 'supabaseUrl: ' + JSON.stringify('http://localhost:' + PORT))
+        .replace(/supabaseAnonKey: '[^']*'/, "supabaseAnonKey: 'test-anon-key'"), 'application/javascript');
     }
     let f = path.join(WEB, decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname));
     if (!f.startsWith(WEB) || !fs.existsSync(f)) return send(res, 404, 'not found', 'text/plain');

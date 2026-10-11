@@ -3,8 +3,8 @@
 window.CRM_CONFIG = {
   appName: 'MICRM',
   // Supabase → Project Settings → API
-  supabaseUrl: 'https://YOUR-PROJECT.supabase.co',
-  supabaseAnonKey: 'YOUR-ANON-KEY',
+  supabaseUrl: 'https://uzdmzewtixarwgronzhm.supabase.co',
+  supabaseAnonKey: 'sb_publishable_gQmqFNPzg5zqGVI0T_bl2w_dODyP_Lw',
   // prices are set in app.js (PLANS) and shown with GST worked in, following legal.gst below
   trialDays: 14,
   supportEmail: 'support@example.com',
