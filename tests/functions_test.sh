@@ -15,7 +15,7 @@ run() {
   if [ -n "$FN" ]; then kill $FN 2>/dev/null; wait $FN 2>/dev/null || true; fi
   for i in $(seq 1 20); do curl -s -o /dev/null -m 1 localhost:8000 || break; sleep 0.3; done
   SUPABASE_URL=http://127.0.0.1:9911 SUPABASE_SERVICE_ROLE_KEY=eyJservice STRIPE_SECRET_KEY=sk_test_x \
-  STRIPE_API_BASE=http://127.0.0.1:9911/stripe SITE_URL=' site.example/
+  STRIPE_API_BASE=http://127.0.0.1:9911/stripe SITE_URL=' site.example./
 ' STRIPE_PRICE_ID=price_user STRIPE_PRICE_AGENCY_10=price_a10 STRIPE_PRICE_AGENCY_20=price_a20 \
   STRIPE_WEBHOOK_SECRET=whsec_test \
     $DENO run --allow-net --allow-env "supabase/dashboard/$1.ts" > /tmp/fn.log 2>&1 & FN=$!

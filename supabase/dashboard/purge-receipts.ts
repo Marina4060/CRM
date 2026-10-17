@@ -20,7 +20,7 @@ var SERVICE_KEY = secretKey();
 var STRIPE_KEY = env("STRIPE_SECRET_KEY");
 var STRIPE_API = (env("STRIPE_API_BASE") || "https://api.stripe.com") + "/v1";
 var SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
-  env("SITE_URL").replace(/\s+/g, "").replace(/\/+$/, "")
+  env("SITE_URL").replace(/\s+/g, "").replace(/[./]+$/, "")
 );
 var PRICES = {
   per_user: env("STRIPE_PRICE_ID"),

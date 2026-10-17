@@ -30,10 +30,10 @@ const STRIPE_VERSION = "2025-02-24.acacia";
 const STRIPE_API = (env("STRIPE_API_BASE") || "https://api.stripe.com") + "/v1";
 
 // the site people use; Stripe sends them back here after paying
-// (spaces dropped, https:// added if it was left off, no slash at the end:
+// (spaces dropped, https:// added if it was left off, no slash or full stop at the end:
 // Stripe refuses a return address that isn't a full web address)
 export const SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
-  env("SITE_URL").replace(/\s+/g, "").replace(/\/+$/, ""));
+  env("SITE_URL").replace(/\s+/g, "").replace(/[./]+$/, ""));
 // the three prices, created in the Stripe dashboard
 export type Plan = "per_user" | "agency_10" | "agency_20";
 export const PRICES: Record<Plan, string> = {
