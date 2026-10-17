@@ -170,6 +170,10 @@ PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_agency.js http://localhost:8787
 kill $MOCK
 
+# the server functions, as packaged for the Supabase website, run under Deno against a
+# stand-in for Supabase and Stripe (9 checks)
+sh tools/bundle_functions.sh && sh tests/functions_test.sh
+
 # the clickable demo: a new user's whole journey (37 checks), every CRM feature opened (37),
 # and the Map view and Vendor Reports (43; the map's address finder and tiles are stand-ins, so it runs offline)
 python3 tools/make_demo.py

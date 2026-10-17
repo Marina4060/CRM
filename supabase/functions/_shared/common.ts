@@ -1,19 +1,19 @@
-// Shared helpers for the Stripe functions.
-import Stripe from "npm:stripe@17.7.0";
-import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2.49.4";
+// Shared helpers for the server functions.
+// No outside libraries: Stripe and Supabase are called over plain HTTPS, so
+// nothing has to be downloaded or bundled when a function starts. (With the
+// Stripe and Supabase npm packages, functions deployed from the Supabase
+// website could hang without answering.)
 
-// a missing key must not stop the function starting (Stripe throws on an empty
-// one): calls then fail with Stripe's own error, which the caller sees
-export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")?.trim() || "sk_missing", {
-  httpClient: Stripe.createFetchHttpClient(),
-});
+const env = (k: string) => (Deno.env.get(k) ?? "").trim();
 
+// ─────────────── settings ───────────────
+export const SUPABASE_URL = env("SUPABASE_URL").replace(/\/+$/, "");
 // the project's server key: the legacy service_role key, or on projects that
 // only have Supabase's newer keys, the first of its secret keys
 function secretKey(): string {
-  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const legacy = env("SUPABASE_SERVICE_ROLE_KEY");
   if (legacy) return legacy;
-  const raw = Deno.env.get("SUPABASE_SECRET_KEYS") ?? "";
+  const raw = env("SUPABASE_SECRET_KEYS");
   try {
     const keys = JSON.parse(raw);
     if (typeof keys === "string") return keys;
@@ -23,22 +23,20 @@ function secretKey(): string {
   }
 }
 export const SERVICE_KEY = secretKey();
-
-// service role: bypasses row security, only ever used on the server
-export const admin: SupabaseClient = createClient(
-  Deno.env.get("SUPABASE_URL") || "http://localhost",
-  SERVICE_KEY || "missing",
-  { auth: { persistSession: false } },
-);
+const STRIPE_KEY = env("STRIPE_SECRET_KEY");
+// the API version the code is written for (where Stripe puts the billing period, etc.)
+const STRIPE_VERSION = "2025-02-24.acacia";
+// overridable only so tests can point it at a stand-in
+const STRIPE_API = (env("STRIPE_API_BASE") || "https://api.stripe.com") + "/v1";
 
 // the site people use; Stripe sends them back here after paying
-export const SITE_URL = (Deno.env.get("SITE_URL") ?? "").trim().replace(/\/+$/, "");
+export const SITE_URL = env("SITE_URL").replace(/\/+$/, "");
 // the three prices, created in the Stripe dashboard
 export type Plan = "per_user" | "agency_10" | "agency_20";
 export const PRICES: Record<Plan, string> = {
-  per_user: Deno.env.get("STRIPE_PRICE_ID") ?? "",          // $100 AUD per person per month
-  agency_10: Deno.env.get("STRIPE_PRICE_AGENCY_10") ?? "",  // $500 AUD per month, up to 10 people
-  agency_20: Deno.env.get("STRIPE_PRICE_AGENCY_20") ?? "",  // $1000 AUD per month, up to 20 people
+  per_user: env("STRIPE_PRICE_ID"),          // $100 AUD per person per month
+  agency_10: env("STRIPE_PRICE_AGENCY_10"),  // $500 AUD per month, up to 10 people
+  agency_20: env("STRIPE_PRICE_AGENCY_20"),  // $1000 AUD per month, up to 20 people
 };
 export const PLAN_LIMIT: Record<Plan, number | null> = { per_user: null, agency_10: 10, agency_20: 20 };
 export const isPlan = (p: unknown): p is Plan => p === "per_user" || p === "agency_10" || p === "agency_20";
@@ -51,10 +49,10 @@ export const quantityFor = (plan: Plan, people: number) => plan === "per_user" ?
 // people the subscription covers
 export const seatsFor = (plan: Plan, quantity: number) => PLAN_LIMIT[plan] ?? quantity;
 
+// ─────────────── replies ───────────────
 // Any site may call these functions: they act only for the signed-in user whose
 // access token comes in the Authorization header (never a cookie), so the
-// browser's origin check adds no protection, and an exact-match origin broke
-// checkout whenever SITE_URL and the site's address differed slightly.
+// browser's origin check adds no protection.
 export const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -74,73 +72,6 @@ export class HttpError extends Error {
   }
 }
 
-export type Team = {
-  id: string;
-  name: string;
-  trial_ends_at: string;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  subscription_status: string | null;
-  seats: number;
-  plan: Plan;
-};
-
-export const PAID = ["active", "trialing", "past_due"];
-
-// the signed-in user behind the request's access token
-export async function userFrom(req: Request): Promise<User> {
-  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (!token) throw new HttpError(401, "Please sign in again.");
-  const { data, error } = await admin.auth.getUser(token);
-  if (error || !data.user) throw new HttpError(401, "Please sign in again.");
-  return data.user;
-}
-
-// the caller, who must own their team, plus the team and its member count
-export async function ownerFrom(req: Request): Promise<{ user: User; team: Team; members: number; openInvites: number }> {
-  const user = await userFrom(req);
-  const { data: m, error } = await admin
-    .from("team_members").select("team_id, role").eq("user_id", user.id).maybeSingle();
-  if (error) throw error;
-  if (!m) throw new HttpError(409, "Please reload the page and try again.");
-  if (m.role !== "owner") throw new HttpError(403, "Only the team owner can manage billing.");
-  const { data: team, error: e2 } = await admin.from("teams").select("*").eq("id", m.team_id).single();
-  if (e2) throw e2;
-  const { count: members } = await admin
-    .from("team_members").select("user_id", { count: "exact", head: true }).eq("team_id", team.id);
-  const { count: openInvites } = await admin
-    .from("invites").select("id", { count: "exact", head: true })
-    .eq("team_id", team.id).is("accepted_at", null).gt("expires_at", new Date().toISOString());
-  return { user, team, members: members ?? 1, openInvites: openInvites ?? 0 };
-}
-
-// find or create the team's Stripe customer (the owner is the billing contact)
-export async function customerFor(team: Team, user: User): Promise<string> {
-  if (team.stripe_customer_id) return team.stripe_customer_id;
-  const c = await stripe.customers.create({
-    email: user.email,
-    name: team.name,
-    metadata: { team_id: team.id, owner_user_id: user.id },
-  });
-  const { error } = await admin.from("teams").update({ stripe_customer_id: c.id }).eq("id", team.id);
-  if (error) throw error;
-  return c.id;
-}
-
-// delete every receipt in a person's folder of the receipts bucket
-export async function removeReceipts(userId: string): Promise<number> {
-  const bucket = admin.storage.from("receipts");
-  let removed = 0;
-  for (;;) {
-    const { data, error } = await bucket.list(userId, { limit: 1000 });
-    if (error) throw error;
-    if (!data || !data.length) return removed;
-    const { error: e2 } = await bucket.remove(data.map((f) => `${userId}/${f.name}`));
-    if (e2) throw e2;
-    removed += data.length;
-  }
-}
-
 // run a handler with CORS, method check and friendly errors
 export function handle(name: string, fn: (req: Request) => Promise<Response>) {
   Deno.serve(async (req) => {
@@ -154,4 +85,182 @@ export function handle(name: string, fn: (req: Request) => Promise<Response>) {
       return json({ error: "Something went wrong. Please try again." }, 500);
     }
   });
+}
+
+// ─────────────── Stripe ───────────────
+export class StripeError extends Error {
+  constructor(public status: number, public code: string | undefined, message: string) {
+    super(message);
+  }
+}
+
+// Stripe takes form fields: nested objects become a[b][c]=…, lists a[0]=…
+function formEncode(params: Record<string, unknown>): string {
+  const out: string[] = [];
+  const add = (key: string, v: unknown) => {
+    if (v === undefined || v === null) return;
+    if (Array.isArray(v)) v.forEach((x, i) => add(`${key}[${i}]`, x));
+    else if (typeof v === "object") for (const [k, x] of Object.entries(v as Record<string, unknown>)) add(`${key}[${k}]`, x);
+    else out.push(encodeURIComponent(key) + "=" + encodeURIComponent(String(v)));
+  };
+  for (const [k, v] of Object.entries(params)) add(k, v);
+  return out.join("&");
+}
+
+// deno-lint-ignore no-explicit-any
+export type StripeObject = Record<string, any>;
+
+export async function stripeApi(method: "GET" | "POST" | "DELETE", path: string, params: Record<string, unknown> = {}): Promise<StripeObject> {
+  if (!STRIPE_KEY) throw new HttpError(500, "Payments are not set up yet.");
+  const body = formEncode(params);
+  const url = STRIPE_API + path + (method === "GET" && body ? "?" + body : "");
+  const r = await fetch(url, {
+    method,
+    headers: {
+      Authorization: "Bearer " + STRIPE_KEY,
+      "Stripe-Version": STRIPE_VERSION,
+      ...(method === "POST" ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+    },
+    body: method === "POST" ? body : undefined,
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const err = j?.error ?? {};
+    throw new StripeError(r.status, err.code, err.message ?? `Stripe request failed (${r.status})`);
+  }
+  return j;
+}
+
+// Stripe's webhook signature: an HMAC-SHA256 of "timestamp.body" with the
+// endpoint's signing secret, sent as Stripe-Signature: t=…,v1=…
+export async function verifyStripeSignature(body: string, header: string, secret: string, toleranceSec = 300): Promise<boolean> {
+  if (!secret || !header) return false;
+  const parts = header.split(",").map((p) => p.trim().split("="));
+  const t = parts.find(([k]) => k === "t")?.[1];
+  const sigs = parts.filter(([k]) => k === "v1").map(([, v]) => v);
+  if (!t || !sigs.length) return false;
+  if (Math.abs(Date.now() / 1000 - Number(t)) > toleranceSec) return false;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${body}`)));
+  const hex = Array.from(mac, (b) => b.toString(16).padStart(2, "0")).join("");
+  // compare without stopping at the first difference
+  return sigs.some((s) => s.length === hex.length && [...s].reduce((d, c, i) => d | (c.charCodeAt(0) ^ hex.charCodeAt(i)), 0) === 0);
+}
+
+// ─────────────── Supabase (database, sign-in, storage) ───────────────
+// the server key bypasses row security; it is only ever used here, on the server
+function serverHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const h: Record<string, string> = { apikey: SERVICE_KEY, ...extra };
+  // the legacy key is a JWT and goes in Authorization too; the newer sb_secret_
+  // keys go in apikey only and Supabase works out the role from it
+  if (SERVICE_KEY.startsWith("eyJ")) h.Authorization = "Bearer " + SERVICE_KEY;
+  return h;
+}
+
+async function supa(method: string, path: string, body?: unknown, extra: Record<string, string> = {}): Promise<Response> {
+  if (!SUPABASE_URL || !SERVICE_KEY) throw new HttpError(500, "The server isn't set up yet.");
+  const r = await fetch(SUPABASE_URL + path, {
+    method,
+    headers: serverHeaders(body === undefined ? extra : { "Content-Type": "application/json", ...extra }),
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    let m = t;
+    try { const j = JSON.parse(t); m = j.message ?? j.msg ?? j.error_description ?? j.error ?? t; } catch { /* plain text */ }
+    throw new HttpError(r.status >= 500 ? 500 : 409, String(m || `Request failed (${r.status})`));
+  }
+  return r;
+}
+
+// deno-lint-ignore no-explicit-any
+type Row = Record<string, any>;
+export const db = {
+  // e.g. db.select("teams", "id=eq.123", "*")
+  async select(table: string, query: string, columns = "*"): Promise<Row[]> {
+    const r = await supa("GET", `/rest/v1/${table}?select=${encodeURIComponent(columns)}${query ? "&" + query : ""}`);
+    return await r.json();
+  },
+  async count(table: string, query: string): Promise<number> {
+    const r = await supa("GET", `/rest/v1/${table}?select=*${query ? "&" + query : ""}`, undefined,
+      { Prefer: "count=exact", "Range-Unit": "items", Range: "0-0" });
+    await r.body?.cancel();
+    const total = (r.headers.get("Content-Range") ?? "").split("/")[1];
+    return Number(total) || 0;
+  },
+  async update(table: string, query: string, values: Row): Promise<void> {
+    const r = await supa("PATCH", `/rest/v1/${table}?${query}`, values, { Prefer: "return=minimal" });
+    await r.body?.cancel();
+  },
+  async rpc(fn: string, args: Row): Promise<unknown> {
+    const r = await supa("POST", `/rest/v1/rpc/${fn}`, args);
+    const t = await r.text();
+    return t ? JSON.parse(t) : null;
+  },
+};
+
+export type User = { id: string; email?: string };
+
+// the signed-in user behind the request's access token
+export async function userFrom(req: Request): Promise<User> {
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (!token || !SUPABASE_URL) throw new HttpError(401, "Please sign in again.");
+  const r = await fetch(SUPABASE_URL + "/auth/v1/user", {
+    headers: { apikey: SERVICE_KEY, Authorization: "Bearer " + token },
+  });
+  const u = await r.json().catch(() => null);
+  if (!r.ok || !u?.id) throw new HttpError(401, "Please sign in again.");
+  return { id: u.id, email: u.email };
+}
+
+export type Team = {
+  id: string;
+  name: string;
+  trial_ends_at: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string | null;
+  seats: number;
+  plan: Plan;
+};
+
+export const PAID = ["active", "trialing", "past_due"];
+
+// the caller, who must own their team, plus the team and its member count
+export async function ownerFrom(req: Request): Promise<{ user: User; team: Team; members: number; openInvites: number }> {
+  const user = await userFrom(req);
+  const [m] = await db.select("team_members", `user_id=eq.${user.id}`, "team_id,role");
+  if (!m) throw new HttpError(409, "Please reload the page and try again.");
+  if (m.role !== "owner") throw new HttpError(403, "Only the team owner can manage billing.");
+  const [team] = await db.select("teams", `id=eq.${m.team_id}`) as Team[];
+  if (!team) throw new HttpError(409, "Please reload the page and try again.");
+  const members = await db.count("team_members", `team_id=eq.${team.id}`);
+  const openInvites = await db.count("invites",
+    `team_id=eq.${team.id}&accepted_at=is.null&expires_at=gt.${encodeURIComponent(new Date().toISOString())}`);
+  return { user, team, members: members || 1, openInvites };
+}
+
+// find or create the team's Stripe customer (the owner is the billing contact)
+export async function customerFor(team: Team, user: User): Promise<string> {
+  if (team.stripe_customer_id) return team.stripe_customer_id;
+  const c = await stripeApi("POST", "/customers", {
+    email: user.email,
+    name: team.name,
+    metadata: { team_id: team.id, owner_user_id: user.id },
+  });
+  await db.update("teams", `id=eq.${team.id}`, { stripe_customer_id: c.id });
+  return c.id;
+}
+
+// delete every receipt in a person's folder of the receipts bucket
+export async function removeReceipts(userId: string): Promise<number> {
+  let removed = 0;
+  for (;;) {
+    const r = await supa("POST", "/storage/v1/object/list/receipts", { prefix: userId, limit: 1000, offset: 0 });
+    const files = (await r.json()) as { name: string }[];
+    if (!files?.length) return removed;
+    const d = await supa("DELETE", "/storage/v1/object/receipts", { prefixes: files.map((f) => `${userId}/${f.name}`) });
+    await d.body?.cancel();
+    removed += files.length;
+  }
 }

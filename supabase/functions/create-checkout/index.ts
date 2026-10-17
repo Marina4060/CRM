@@ -5,7 +5,7 @@
 // Subscribing during the free trial doesn't cost any trial days: Stripe waits
 // until the trial ends before charging.
 import {
-  customerFor, handle, HttpError, isPlan, json, ownerFrom, PAID, type Plan, PLAN_LIMIT, PRICES, quantityFor, SITE_URL, stripe,
+  customerFor, handle, HttpError, isPlan, json, ownerFrom, PAID, type Plan, PLAN_LIMIT, PRICES, quantityFor, SITE_URL, stripeApi,
 } from "../_shared/common.ts";
 
 // Stripe needs a trial end at least 48 hours away
@@ -25,21 +25,22 @@ handle("create-checkout", async (req) => {
   }
   const customer = await customerFor(team, user);
   // never a second subscription: one may already be running, or waiting on a card check
-  const existing = await stripe.subscriptions.list({ customer, status: "all", limit: 20 });
-  const live = existing.data.find((s) => PAID.includes(s.status) || s.status === "incomplete");
+  const existing = await stripeApi("GET", "/subscriptions", { customer, status: "all", limit: 20 });
+  const live = (existing.data as { status: string }[]).find((s) => PAID.includes(s.status) || s.status === "incomplete");
   if (live) {
     throw new HttpError(409, live.status === "incomplete"
       ? "A payment for your subscription is still being confirmed. Try again in a few minutes, or use Manage billing."
       : "Your team already has a subscription. Use Change plan or Manage billing.");
   }
   // only the newest checkout page can complete, so paying twice in two tabs isn't possible
-  for await (const open of stripe.checkout.sessions.list({ customer, status: "open", limit: 20 })) {
-    await stripe.checkout.sessions.expire(open.id).catch(() => {});
+  const open = await stripeApi("GET", "/checkout/sessions", { customer, status: "open", limit: 20 });
+  for (const s of open.data as { id: string }[]) {
+    await stripeApi("POST", `/checkout/sessions/${s.id}/expire`).catch(() => {});
   }
   const trialEnd = new Date(team.trial_ends_at).getTime();
   const keepTrial = trialEnd - Date.now() > MIN_TRIAL_MS;
 
-  const session = await stripe.checkout.sessions.create({
+  const session = await stripeApi("POST", "/checkout/sessions", {
     mode: "subscription",
     customer,
     client_reference_id: team.id,
