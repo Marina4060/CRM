@@ -1,24 +1,29 @@
 # Only the settings this project changes; `supabase init` fills in the rest
 # if you want to run it locally.
+#
+# Every function checks the caller itself (the signed-in user's token through
+# the Auth API, Stripe's signature, or the service role key), so the gateway's
+# own JWT check is off. That also lets browsers' CORS preflight requests through
+# and works with Supabase's newer JWT signing keys.
 
 [functions.create-checkout]
-verify_jwt = true
+verify_jwt = false
 
 [functions.billing-portal]
-verify_jwt = true
+verify_jwt = false
 
 # Stripe calls this one directly; it checks Stripe's signature instead
 [functions.stripe-webhook]
 verify_jwt = false
 
 [functions.set-seats]
-verify_jwt = true
+verify_jwt = false
 
 [functions.change-plan]
-verify_jwt = true
+verify_jwt = false
 
 [functions.delete-account]
-verify_jwt = true
+verify_jwt = false
 
 # called on a schedule with the service role key, which it checks itself
 [functions.purge-receipts]

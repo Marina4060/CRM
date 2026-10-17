@@ -44,7 +44,9 @@ You need three accounts: **Supabase** (database and logins), **Stripe** (payment
 
 ## 3. Server functions
 
-With the [Supabase CLI](https://supabase.com/docs/guides/cli) installed and linked to your project:
+**Without installing anything:** each function is packaged as one file in `supabase/dashboard/` (rebuild them with `sh tools/bundle_functions.sh` after changing a function). In Supabase, open *Edge Functions → Deploy a new function → Via editor*, name it exactly as the file (e.g. `create-checkout`), paste in the file's contents, turn **Verify JWT off** (every function checks the caller itself) and deploy. Do this for all seven. Add the secrets below under *Edge Functions → Secrets*.
+
+**Or** with the [Supabase CLI](https://supabase.com/docs/guides/cli) installed and linked to your project:
 
 ```
 supabase functions deploy create-checkout
@@ -53,7 +55,7 @@ supabase functions deploy set-seats
 supabase functions deploy billing-portal
 supabase functions deploy delete-account
 supabase functions deploy purge-receipts
-supabase functions deploy stripe-webhook --no-verify-jwt
+supabase functions deploy stripe-webhook
 
 supabase secrets set STRIPE_SECRET_KEY=sk_test_... SITE_URL=https://micrm.com.au \
   STRIPE_PRICE_ID=price_... STRIPE_PRICE_AGENCY_10=price_... STRIPE_PRICE_AGENCY_20=price_...
