@@ -4,7 +4,7 @@
 // supabase/functions/_shared/common.ts
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
-var stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
+var stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")?.trim() || "sk_missing", {
   httpClient: Stripe.createFetchHttpClient()
 });
 function secretKey() {
@@ -21,8 +21,8 @@ function secretKey() {
 }
 var SERVICE_KEY = secretKey();
 var admin = createClient(
-  Deno.env.get("SUPABASE_URL") ?? "",
-  SERVICE_KEY,
+  Deno.env.get("SUPABASE_URL") || "http://localhost",
+  SERVICE_KEY || "missing",
   { auth: { persistSession: false } }
 );
 var SITE_URL = (Deno.env.get("SITE_URL") ?? "").trim().replace(/\/+$/, "");

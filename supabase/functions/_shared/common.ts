@@ -2,7 +2,9 @@
 import Stripe from "npm:stripe@17.7.0";
 import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2.49.4";
 
-export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
+// a missing key must not stop the function starting (Stripe throws on an empty
+// one): calls then fail with Stripe's own error, which the caller sees
+export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")?.trim() || "sk_missing", {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
@@ -24,8 +26,8 @@ export const SERVICE_KEY = secretKey();
 
 // service role: bypasses row security, only ever used on the server
 export const admin: SupabaseClient = createClient(
-  Deno.env.get("SUPABASE_URL") ?? "",
-  SERVICE_KEY,
+  Deno.env.get("SUPABASE_URL") || "http://localhost",
+  SERVICE_KEY || "missing",
   { auth: { persistSession: false } },
 );
 
