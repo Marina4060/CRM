@@ -7,9 +7,22 @@ import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 var stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
   httpClient: Stripe.createFetchHttpClient()
 });
+function secretKey() {
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  const raw = Deno.env.get("SUPABASE_SECRET_KEYS") ?? "";
+  try {
+    const keys = JSON.parse(raw);
+    if (typeof keys === "string") return keys;
+    return String(keys?.default ?? Object.values(keys ?? {})[0] ?? "");
+  } catch {
+    return raw;
+  }
+}
+var SERVICE_KEY = secretKey();
 var admin = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  SERVICE_KEY,
   { auth: { persistSession: false } }
 );
 var SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/$/, "");

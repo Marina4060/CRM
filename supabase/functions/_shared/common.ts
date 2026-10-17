@@ -6,10 +6,26 @@ export const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
   httpClient: Stripe.createFetchHttpClient(),
 });
 
+// the project's server key: the legacy service_role key, or on projects that
+// only have Supabase's newer keys, the first of its secret keys
+function secretKey(): string {
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  const raw = Deno.env.get("SUPABASE_SECRET_KEYS") ?? "";
+  try {
+    const keys = JSON.parse(raw);
+    if (typeof keys === "string") return keys;
+    return String(keys?.default ?? Object.values(keys ?? {})[0] ?? "");
+  } catch {
+    return raw;
+  }
+}
+export const SERVICE_KEY = secretKey();
+
 // service role: bypasses row security, only ever used on the server
 export const admin: SupabaseClient = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+  SERVICE_KEY,
   { auth: { persistSession: false } },
 );
 
