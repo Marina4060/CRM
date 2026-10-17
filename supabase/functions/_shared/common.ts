@@ -30,7 +30,7 @@ export const admin: SupabaseClient = createClient(
 );
 
 // the site people use; Stripe sends them back here after paying
-export const SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/$/, "");
+export const SITE_URL = (Deno.env.get("SITE_URL") ?? "").trim().replace(/\/+$/, "");
 // the three prices, created in the Stripe dashboard
 export type Plan = "per_user" | "agency_10" | "agency_20";
 export const PRICES: Record<Plan, string> = {
@@ -49,8 +49,12 @@ export const quantityFor = (plan: Plan, people: number) => plan === "per_user" ?
 // people the subscription covers
 export const seatsFor = (plan: Plan, quantity: number) => PLAN_LIMIT[plan] ?? quantity;
 
+// Any site may call these functions: they act only for the signed-in user whose
+// access token comes in the Authorization header (never a cookie), so the
+// browser's origin check adds no protection, and an exact-match origin broke
+// checkout whenever SITE_URL and the site's address differed slightly.
 export const cors = {
-  "Access-Control-Allow-Origin": SITE_URL || "*",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };

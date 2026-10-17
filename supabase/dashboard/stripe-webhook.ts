@@ -28,7 +28,7 @@ var admin = createClient(
   SERVICE_KEY,
   { auth: { persistSession: false } }
 );
-var SITE_URL = (Deno.env.get("SITE_URL") ?? "").replace(/\/$/, "");
+var SITE_URL = (Deno.env.get("SITE_URL") ?? "").trim().replace(/\/+$/, "");
 var PRICES = {
   per_user: Deno.env.get("STRIPE_PRICE_ID") ?? "",
   // $100 AUD per person per month
