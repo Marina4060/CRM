@@ -20,7 +20,9 @@ var SERVICE_KEY = secretKey();
 var STRIPE_KEY = env("STRIPE_SECRET_KEY");
 var STRIPE_VERSION = "2025-02-24.acacia";
 var STRIPE_API = (env("STRIPE_API_BASE") || "https://api.stripe.com") + "/v1";
-var SITE_URL = env("SITE_URL").replace(/\/+$/, "");
+var SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
+  env("SITE_URL").replace(/\s+/g, "").replace(/\/+$/, "")
+);
 var PRICES = {
   per_user: env("STRIPE_PRICE_ID"),
   // $100 AUD per person per month
@@ -58,6 +60,10 @@ function handle(name, fn) {
       return await fn(req);
     } catch (e) {
       if (e instanceof HttpError) return json({ error: e.message }, e.status);
+      if (e instanceof StripeError) {
+        console.error(name, "Stripe said:", e.status, e.code, e.message);
+        return json({ error: "Stripe: " + e.message }, 502);
+      }
       console.error(name, e);
       return json({ error: "Something went wrong. Please try again." }, 500);
     }
@@ -68,6 +74,7 @@ var StripeError = class extends Error {
     super(message);
     this.status = status;
     this.code = code;
+    this.name = "StripeError";
   }
 };
 function formEncode(params) {

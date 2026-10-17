@@ -20,7 +20,9 @@ var SERVICE_KEY = secretKey();
 var STRIPE_KEY = env("STRIPE_SECRET_KEY");
 var STRIPE_VERSION = "2025-02-24.acacia";
 var STRIPE_API = (env("STRIPE_API_BASE") || "https://api.stripe.com") + "/v1";
-var SITE_URL = env("SITE_URL").replace(/\/+$/, "");
+var SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
+  env("SITE_URL").replace(/\s+/g, "").replace(/\/+$/, "")
+);
 var PRICES = {
   per_user: env("STRIPE_PRICE_ID"),
   // $100 AUD per person per month
@@ -46,6 +48,7 @@ var StripeError = class extends Error {
     super(message);
     this.status = status;
     this.code = code;
+    this.name = "StripeError";
   }
 };
 function formEncode(params) {

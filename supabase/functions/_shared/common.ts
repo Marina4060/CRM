@@ -30,7 +30,10 @@ const STRIPE_VERSION = "2025-02-24.acacia";
 const STRIPE_API = (env("STRIPE_API_BASE") || "https://api.stripe.com") + "/v1";
 
 // the site people use; Stripe sends them back here after paying
-export const SITE_URL = env("SITE_URL").replace(/\/+$/, "");
+// (spaces dropped, https:// added if it was left off, no slash at the end:
+// Stripe refuses a return address that isn't a full web address)
+export const SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
+  env("SITE_URL").replace(/\s+/g, "").replace(/\/+$/, ""));
 // the three prices, created in the Stripe dashboard
 export type Plan = "per_user" | "agency_10" | "agency_20";
 export const PRICES: Record<Plan, string> = {
@@ -81,6 +84,11 @@ export function handle(name: string, fn: (req: Request) => Promise<Response>) {
       return await fn(req);
     } catch (e) {
       if (e instanceof HttpError) return json({ error: e.message }, e.status);
+      // Stripe's own wording says what to fix (a price, a key, an address)
+      if (e instanceof StripeError) {
+        console.error(name, "Stripe said:", e.status, e.code, e.message);
+        return json({ error: "Stripe: " + e.message }, 502);
+      }
       console.error(name, e);
       return json({ error: "Something went wrong. Please try again." }, 500);
     }
@@ -91,6 +99,7 @@ export function handle(name: string, fn: (req: Request) => Promise<Response>) {
 export class StripeError extends Error {
   constructor(public status: number, public code: string | undefined, message: string) {
     super(message);
+    this.name = "StripeError";
   }
 }
 
