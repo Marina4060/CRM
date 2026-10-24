@@ -10,7 +10,7 @@ A real estate prospecting CRM that runs as one web page in the browser, with not
 
 1. Download `index.html` and open it in Chrome, Edge or Safari. It works on a phone too.
 2. On first open, fill in **My details**: name, agency, mobile and email. You can also add a website, office address, brand colour and logo. Every SMS, email and letter signs off with these details. Change them any time with **👤 My details**.
-3. Add contacts with **+ Add Contact** or **Contact Import**. Suburb tabs and street filters build themselves from your contacts.
+3. Add contacts with **+ Add Contact**. Suburb tabs and street filters build themselves from your contacts.
 
 Everything you enter is saved in **this browser on this device only**. Use **Backup** / **Export / Save** regularly, and use the backup to move to another device.
 

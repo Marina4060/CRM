@@ -76,7 +76,7 @@
     if (opts.auth !== false && session) headers.Authorization = 'Bearer ' + session.access_token;
     if (opts.prefer) headers.Prefer = opts.prefer;
     var doFetch = function () {
-      return fetch(API + path, { method: method, headers: headers, body: body == null ? undefined : JSON.stringify(body) })
+      return fetch(API + path, { method: method, headers: headers, cache: 'no-store', body: body == null ? undefined : JSON.stringify(body) })
         .catch(function () { throw new NetError('You appear to be offline.'); });
     };
     var run = function () {

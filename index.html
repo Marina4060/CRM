@@ -630,7 +630,6 @@ body.crm-searching [id$="-pills"]{display:none !important}
   <button class="diary-open-btn" onclick="openSessionLog()" style="margin-left:4px;background:#1a1410;color:#F5A623;border-color:#F5A623">📝 Session Log</button>
   <button class="diary-open-btn" onclick="openDiary()" style="margin-left:4px">📅 Diary</button>
   <button class="cal-btn-top" onclick="openCommand()" style="background:#16324f;color:#fff;border-color:#16324f;font-weight:700">🧭 Command Centre</button>
-  <button class="cal-btn-top" onclick="openRPImport()" style="background:#E6F1FB;color:#185FA5;border-color:#B5D4F4;font-weight:600">📥 Contact Import</button>
   <button class="cal-btn-top" onclick="openAddContact()" style="background:#E1F5EE;color:#0F6E56;border-color:#1D9E75;font-weight:600">+ Add Contact</button>
   <button class="cal-btn-top" onclick="crmBackup()" style="background:#E1F5EE;color:#0F6E56;border-color:#1D9E75;font-weight:600">💾 Backup</button>
   <button id="nearby-btn" class="cal-btn-top" style="background: rgb(250, 238, 218); color: rgb(133, 79, 11); border-color: rgb(232, 196, 138); font-weight: 600;">🏷 For sale nearby</button><button class="cal-btn-top" onclick="exportCRM()" style="background:#0F6E56;color:#fff;border-color:#0F6E56;font-weight:600">⬇ Export / Save</button>
@@ -1741,7 +1740,7 @@ function renderPredictive(){
     +'<div style="margin-top:16px">'
       +'<div style="background:#5a6b7c;color:#fff;padding:7px 10px;border-radius:6px 6px 0 0;font-size:12px;display:flex;justify-content:space-between">'
         +'<b>No purchase year or build year yet - pull from RP Data</b><span>'+res.unknown.length+'</span></div>'
-      +'<div style="font-size:11px;color:#5a6b7c;background:#eef2f6;padding:6px 10px">These are NOT ranked above, because there is nothing to score them on. Paste their street into Contact Import and they will appear in the ranking.</div>'
+      +'<div style="font-size:11px;color:#5a6b7c;background:#eef2f6;padding:6px 10px">These are NOT ranked above, because there is nothing to score them on. Add their purchase year to the contact and they will appear in the ranking.</div>'
       +(unk
         ? '<table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff"><tbody>'+unk+'</tbody></table>'
         : '<div style="background:#fff;padding:12px;font-size:12px;color:#5a6b7c">Nothing outstanding \u2014 every contact in '+predSuburb+' has a purchase year.</div>')
@@ -3023,7 +3022,6 @@ function renderCommand(){
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">'
        +tile('Message runner',(typeof campaignStreetStats==='function'?campaignStreetStats(suburbF||'').filter(function(e){return e.due>0;}).length:0)+' streets due','#0F6E56','document.getElementById(\'cmd-modal\').remove();openStreetCampaign()')
        +tile('Predictive sellers','rank','#7a1f1f','document.getElementById(\'cmd-modal\').remove();openPredictive()')
-       +tile('RP Data import','paste','#185FA5','document.getElementById(\'cmd-modal\').remove();openRPImport()')
        +tile('Export CRM','save','#16324f','document.getElementById(\'cmd-modal\').remove();exportCRM()')
       +'</div>'
       +'<div style="background:#fff;border-radius:9px;padding:11px 13px">'
@@ -11838,7 +11836,7 @@ window.CRM_LEAFLET = L.noConflict();
     visible().forEach(function(c){ counts[c.stage] = (counts[c.stage] || 0) + 1; });
     document.getElementById('mv-legend').innerHTML = LANES.filter(function(l){ return counts[l.key]; }).map(function(l){
       return '<span class="mv-chip' + (hidden[l.key] ? ' off' : '') + '" onclick="crmMapToggle(\'' + l.key + '\')" title="Show or hide ' + h(l.title) + '"><i style="background:' + l.bar + '"></i>' + h(l.title) + ' ' + counts[l.key] + '</span>';
-    }).join('') || '<span class="mv-status" style="margin-left:0">No contacts to show. Add contacts with + Add Contact or Contact Import.</span>';
+    }).join('') || '<span class="mv-status" style="margin-left:0">No contacts to show. Add contacts with + Add Contact.</span>';
   }
   window.crmMapToggle = function(k){ hidden[k] = !hidden[k]; draw(); };
 
