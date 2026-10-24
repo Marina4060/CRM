@@ -672,7 +672,7 @@
 
   // ─────────────── the CRM itself ───────────────
   function fetchApp() {
-    return req('GET', '/storage/v1/object/authenticated/app/crm.html', null, { raw: true })
+    return req('GET', '/storage/v1/object/authenticated/app/crm.html?t=' + Date.now(), null, { raw: true })
       .then(function (r) { return r.text(); })
       .then(function (html) {
         if ('caches' in window) caches.open(APP_CACHE).then(function (c) { c.put('crm.html', new Response(html, { headers: { 'Content-Type': 'text/html' } })); }).catch(function () { });
@@ -737,7 +737,7 @@
     (fromCloud ? pull() : Promise.resolve()).then(loadCrm);
   }
   function checkVersion() {
-    req('GET', '/storage/v1/object/authenticated/app/version.json', null, { raw: true })
+    req('GET', '/storage/v1/object/authenticated/app/version.json?t=' + Date.now(), null, { raw: true })
       .then(function (r) { return r.json(); })
       .then(function (v) {
         appVersion = v.version || null;
