@@ -169,7 +169,7 @@
     visible().forEach(function(c){ counts[c.stage] = (counts[c.stage] || 0) + 1; });
     document.getElementById('mv-legend').innerHTML = LANES.filter(function(l){ return counts[l.key]; }).map(function(l){
       return '<span class="mv-chip' + (hidden[l.key] ? ' off' : '') + '" onclick="crmMapToggle(\'' + l.key + '\')" title="Show or hide ' + h(l.title) + '"><i style="background:' + l.bar + '"></i>' + h(l.title) + ' ' + counts[l.key] + '</span>';
-    }).join('') || '<span class="mv-status" style="margin-left:0">No contacts to show. Add contacts with + Add Contact or RP Data Import.</span>';
+    }).join('') || '<span class="mv-status" style="margin-left:0">No contacts to show. Add contacts with + Add Contact or Contact Import.</span>';
   }
   window.crmMapToggle = function(k){ hidden[k] = !hidden[k]; draw(); };
 
