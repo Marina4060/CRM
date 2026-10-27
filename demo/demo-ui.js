@@ -26,8 +26,7 @@
     '<li><b>Buyers.</b> Open <b>\uD83D\uDC65 Buyers</b>, add a buyer, then add a note like <i>Pre-approved to $800k, first home buyer, buying in the next 2 months</i> and watch them move to Qualified.</li>' +
     '<li><b>Receipts.</b> In <b>Expenses</b>, tap <b>Photo or file</b> before adding an expense.</li>' +
     '<li><b>Invite an agent.</b> Open <b>Team</b>, invite any email, sign out, then create an account with that email and tap <b>Join</b>.</li>' +
-    '<li><b>Shared list.</b> As the owner, open <b>Billing</b> and try <b>Agency 10</b>. Now contacts either of you add show for both.</li>' +
-    '<li><b>Team dashboard.</b> As the owner, open <b>Team</b> for each person\'s contacts added, calls, texts and emails.</li>' +
+    '<li><b>Team dashboard.</b> As the owner, open <b>Team</b> for each person\'s pipeline numbers, calls, texts and emails (never their clients\' details).</li>' +
     '<li><b>Subscribe.</b> On <b>Billing</b>, tap Subscribe (payment is simulated).</li>' +
     '<li><b>Trial ending.</b> Use the button below to see what people see when the trial runs out.</li>' +
     '<li><b>Delete account.</b> Open the round button top right, then <b>Delete my account</b>.</li>' +

@@ -6,6 +6,7 @@ window.CRM_CONFIG = {
   supabaseUrl: 'https://uzdmzewtixarwgronzhm.supabase.co',
   supabaseAnonKey: 'sb_publishable_gQmqFNPzg5zqGVI0T_bl2w_dODyP_Lw',
   // prices are set in app.js (PLANS) and shown with GST worked in, following legal.gst below
+  agencyPlans: false,   // true offers the Agency 10 / Agency 20 plans (one shared contact list) again
   trialDays: 14,
   supportEmail: 'support@example.com',
   // the terms of service and privacy policy (web/terms.html, web/privacy.html) fill in these details

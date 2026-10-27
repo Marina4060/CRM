@@ -247,7 +247,8 @@ http.createServer(async (req, res) => {
     if (url.pathname === '/config.js') {
       return send(res, 200, fs.readFileSync(path.join(WEB, 'config.js'), 'utf8')
         .replace(/supabaseUrl: '[^']*'/, 'supabaseUrl: ' + JSON.stringify('http://localhost:' + PORT))
-        .replace(/supabaseAnonKey: '[^']*'/, "supabaseAnonKey: 'test-anon-key'"), 'application/javascript');
+        .replace(/supabaseAnonKey: '[^']*'/, "supabaseAnonKey: 'test-anon-key'")
+        .replace(/agencyPlans: \w+/, 'agencyPlans: ' + (process.env.MOCK_AGENCY_PLANS ? 'true' : 'false')), 'application/javascript');
     }
     let f = path.join(WEB, decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname));
     if (!f.startsWith(WEB) || !fs.existsSync(f)) return send(res, 404, 'not found', 'text/plain');

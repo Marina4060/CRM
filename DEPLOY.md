@@ -1,14 +1,10 @@
 # Putting the CRM online with subscriptions
 
-This turns the CRM into an online service. People sign up and get a 14-day free trial with no card needed. After that they pay monthly by card through Stripe on one of three plans:
+This turns the CRM into an online service. People sign up and get a 14-day free trial with no card needed. After that they pay **$399 AUD per agent per month**, month to month, by card through Stripe. Each agent's contacts are private to them.
 
-| Plan | Price (AUD) | People | Contacts |
-|---|---|---|---|
-| **Per agent** | $100 per agent per month | any number | private to each agent |
-| **Agency 10** | $500 per month | up to 10 | one shared list for the whole agency |
-| **Agency 20** | $1000 per month | up to 20 | one shared list for the whole agency |
+Data is saved to the cloud and syncs between phone and computer. Teams have roles (owner, admin, agent) and a team dashboard.
 
-Data is saved to the cloud and syncs between phone and computer. Teams have roles (owner, admin, agent) and a team dashboard. The owner can try any plan during the trial and switch plans later.
+The code also still supports two agency plans with one shared contact list (Agency 10 and Agency 20), but they are not offered: the app and website show only the per-agent price. To offer them again, set `agencyPlans: true` in `web/config.js`, add them back to the pricing section of `web/index.html` and the terms, and set their Stripe prices.
 
 ```
 web/                 the website: index.html is the front page (features, plans, Start free trial);
@@ -34,10 +30,9 @@ You need three accounts: **Supabase** (database and logins), **Stripe** (payment
 
 ## 2. Stripe
 
-1. **Product catalogue → Add product:** name it "MICRM" and add three **recurring monthly** prices in **AUD**. Copy each price ID (`price_…`):
-   - **Per agent:** 100.00 AUD per month, **per unit** (each unit is one agent) → `STRIPE_PRICE_ID`
-   - **Agency 10:** 500.00 AUD per month, flat → `STRIPE_PRICE_AGENCY_10`
-   - **Agency 20:** 1000.00 AUD per month, flat → `STRIPE_PRICE_AGENCY_20`
+1. **Product catalogue → Add product:** name it "MICRM" and add a **recurring monthly** price in **AUD**, and copy its price ID (`price_…`):
+   - **Per agent:** 399.00 AUD per month, **per unit** (each unit is one agent) → `STRIPE_PRICE_ID`
+   - (Only if you bring the agency plans back: Agency 10 → `STRIPE_PRICE_AGENCY_10`, Agency 20 → `STRIPE_PRICE_AGENCY_20`.)
    - GST: decide with your accountant whether these prices include GST (and set `gst` in `web/config.js` to match). If you're registered, turn on Stripe Tax or mark the prices tax-inclusive, and add your ABN under *Settings → Business → Tax details*, so invoices show it.
 2. **Settings → Billing → Customer portal:** allow customers to update their payment method, view invoices, **change quantity** and cancel (cancel at the end of the billing period). Plan changes happen inside the app, so switching products in the portal can stay off.
 3. **Developers → API keys:** copy the **secret key** (`sk_test_…` for now).
@@ -88,9 +83,7 @@ Do the same whenever you change the CRM. Everyone gets the new version the next 
 4. **Billing → Subscribe:** pay with Stripe's test card `4242 4242 4242 4242` (any future date, any CVC). The top bar should change to *Subscribed*.
 5. Open **Manage billing**, cancel, and check the app shows when access ends.
 
-6. **Agency plan:** under **Billing**, click *Try Agency 10*. Sign in as the invited agent in another browser: you should both see and edit the same contacts. When one of you adds a contact, the other gets a *"contacts were updated by your team"* note.
-
-When everything works, switch Stripe to live mode: create the product, the three prices and the webhook again in live mode, and set `STRIPE_SECRET_KEY`, the three price IDs and `STRIPE_WEBHOOK_SECRET` to the live values.
+When everything works, switch Stripe to live mode: create the product, the price and the webhook again in live mode, and set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` to the live values.
 
 ## 7. Deleting data after accounts end
 
@@ -137,7 +130,7 @@ If someone asks for their account to be deleted, the simplest way is for them to
 - Every account is part of a team. A solo agent is a team of one, and they are its **owner**.
 - **Owner:** billing, plan, seats, roles and invites. **Admin:** invites agents and sees the team dashboard. **Agent:** the CRM.
 - **Per agent plan:** each agent's contacts are private to them. The team dashboard shows counts only (contacts, hot leads, appraisals, listings, sales, calls and texts this week), never client names or details.
-- **Agency plans:** the contact list and each contact's activity (calls, texts, notes) are shared by everyone in the team. Each contact is saved separately, so two agents working at the same time don't overwrite each other. If both edit the *same* contact at once, the later save wins. Every call, text and note records who made it, and the dashboard shows each agent's contacts added and activity. Diary, appointments, templates, expenses, logbook and buyers stay personal.
+- **Agency plans (not currently offered):** the contact list and each contact's activity (calls, texts, notes) are shared by everyone in the team. Each contact is saved separately, so two agents working at the same time don't overwrite each other. If both edit the *same* contact at once, the later save wins. Every call, text and note records who made it, and the dashboard shows each agent's contacts added and activity. Diary, appointments, templates, expenses, logbook and buyers stay personal.
 - **Moving to an agency plan:** each person's earlier contacts stay private. The Team page offers to add them to the shared list. **Moving back to Per agent:** everyone returns to their own contacts, and the shared list is kept in case you return.
 - **Limits:** Agency 10 allows up to 10 people and Agency 20 up to 20, counting pending invites. A trial team can have up to 20 people.
 - **Invites:** the invite link joins the team. Someone who signs up with an invited email but without the link sees "… invited you to join …" with a **Join** button: nobody is added to a team without saying yes. Joining checks the team still has room (its plan limit, or its paid seats).
@@ -160,13 +153,13 @@ On a machine with PostgreSQL 16 and Node:
 # the database rules (96 checks)
 PGHOST=localhost PGUSER=postgres supabase/tests/permissions_test.sh
 
-# the whole app in a browser against a local stand-in for Supabase and Stripe (73 + 38 checks)
+# the whole app in a browser against a local stand-in for Supabase and Stripe (74 + 38 checks)
 cd tests && npm install && cd ..
 PGDATABASE=crm_e2e tests/setup_e2e_db.sh
 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_hosted.js http://localhost:8787
 kill $MOCK; PGDATABASE=crm_e2e tests/setup_e2e_db.sh     # a fresh database for the next test
-PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
+MOCK_AGENCY_PLANS=1 PGDATABASE=crm_e2e node tests/mock_supabase.js 8787 & MOCK=$!
 PGDATABASE=crm_e2e node tests/e2e_agency.js http://localhost:8787
 kill $MOCK
 
@@ -174,7 +167,7 @@ kill $MOCK
 # stand-in for Supabase and Stripe (9 checks)
 sh tools/bundle_functions.sh && sh tests/functions_test.sh
 
-# the clickable demo: a new user's whole journey (37 checks), every CRM feature opened (37),
+# the clickable demo: a new user's whole journey (35 checks), every CRM feature opened (36),
 # and the Map view and Vendor Reports (43; the map's address finder and tiles are stand-ins, so it runs offline)
 python3 tools/make_demo.py
 # serve demo/build over http, wrapping page.html in <html><body>…</body></html> as _local.html, then:

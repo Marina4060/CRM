@@ -23,14 +23,15 @@
   }
   var GST_NOTE = !GST_MODE || /no gst|not registered/.test(GST_MODE) ? '' : ' incl. GST';
   var PLANS = C.plans || [
-    { id: 'per_user', name: 'Per agent', price: aud(100) + ' per agent / month' + GST_NOTE, people: 'Any number of agents', shared: false,
-      blurb: 'Each agent keeps their own private contacts.' },
+    { id: 'per_user', name: 'Per agent', price: aud(399) + ' per agent / month' + GST_NOTE, people: 'Any number of agents', shared: false,
+      blurb: 'Prospecting and CRM in one. Each agent keeps their own private contacts.' }
+  ].concat(C.agencyPlans ? [   // not offered at the moment; config.js agencyPlans: true brings them back
     { id: 'agency_10', name: 'Agency 10', price: aud(500) + ' / month' + GST_NOTE, people: 'Up to 10 people', shared: true,
       blurb: 'One shared contact list the whole agency sees and works.' },
     { id: 'agency_20', name: 'Agency 20', price: aud(1000) + ' / month' + GST_NOTE, people: 'Up to 20 people', shared: true,
       blurb: 'One shared contact list the whole agency sees and works.' }
-  ];
-  C.priceLabel = C.priceLabel || 'from ' + aud(100) + ' per agent per month' + GST_NOTE;
+  ] : []);
+  C.priceLabel = C.priceLabel || aud(399) + ' per agent per month' + GST_NOTE;
   function planInfo(id) { return PLANS.filter(function (p) { return p.id === id; })[0] || PLANS[0]; }
   var ctx = null;         // from app_context(): user, role, team, access
   var session = null;     // {access_token, refresh_token, expires_at, user:{id,email}}
@@ -862,7 +863,7 @@
   function paintSharedBox() {
     var box = $('#shared-box'), t = ctx.team;
     if (!t.shared) {
-      box.innerHTML = '<p class="muted small">Each person\'s contacts are private.' + (isOwner() ? ' An <a href="#billing">Agency plan</a> gives the whole team one shared contact list.' : '') + '</p>';
+      box.innerHTML = '<p class="muted small">Each person\'s contacts are private.</p>';
       return;
     }
     box.innerHTML = '<p><b>Shared contact list is on</b> (' + esc(planInfo(t.plan).name) + ', ' + esc(planInfo(t.plan).people.toLowerCase()) + '). ' +
@@ -1017,6 +1018,7 @@
     card.innerHTML = html;
     // the plans side by side
     var plans = $('#plans');
+    $('#plans-wrap').hidden = PLANS.length < 2 && t.plan === PLANS[0].id;
     plans.innerHTML = PLANS.map(function (p) {
       var cur = p.id === t.plan, tooBig = p.id !== 'per_user' && t.members > (p.id === 'agency_10' ? 10 : 20);
       var btn = !owner || cur ? '' : tooBig ? '<p class="muted small">Your team is too big for this plan.</p>'
@@ -1067,7 +1069,7 @@
     $('#support-mail').textContent = C.supportEmail || ''; $('#support-mail').href = 'mailto:' + (C.supportEmail || '');
     $('#install-help').innerHTML = installHelpText();
     $('#billing-help').textContent = 'Every new account gets ' + (C.trialDays || 14) + ' days free. After that it\'s ' + (C.priceLabel || '') +
-      ', paid by the team owner by card: $100 per agent (contacts private to each agent), or for agencies $500 for up to 10 people or $1000 for up to 20, with one shared contact list. Solo agents are a team of one.';
+      ', paid by the team owner by card, one seat per agent. Solo agents are a team of one.';
     rest('GET', '/support_requests?select=created_at,topic,message,status&order=created_at.desc&limit=5').then(function (rows) {
       $('#my-requests').innerHTML = rows.length ? '<h2>Your recent messages</h2>' + rows.map(function (r) {
         return '<p class="small"><b>' + fmtDate(r.created_at) + '</b> · ' + esc(r.status) + '<br>' + esc(r.message.slice(0, 140)) + (r.message.length > 140 ? '…' : '') + '</p>';

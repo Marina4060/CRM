@@ -37,9 +37,9 @@ export const SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u :
 // the three prices, created in the Stripe dashboard
 export type Plan = "per_user" | "agency_10" | "agency_20";
 export const PRICES: Record<Plan, string> = {
-  per_user: env("STRIPE_PRICE_ID"),          // $100 AUD per person per month
-  agency_10: env("STRIPE_PRICE_AGENCY_10"),  // $500 AUD per month, up to 10 people
-  agency_20: env("STRIPE_PRICE_AGENCY_20"),  // $1000 AUD per month, up to 20 people
+  per_user: env("STRIPE_PRICE_ID"),          // $399 AUD per person per month
+  agency_10: env("STRIPE_PRICE_AGENCY_10"),  // agency plans: not currently offered in the app
+  agency_20: env("STRIPE_PRICE_AGENCY_20"),
 };
 export const PLAN_LIMIT: Record<Plan, number | null> = { per_user: null, agency_10: 10, agency_20: 20 };
 export const isPlan = (p: unknown): p is Plan => p === "per_user" || p === "agency_10" || p === "agency_20";

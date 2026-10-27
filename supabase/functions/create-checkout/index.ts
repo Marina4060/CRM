@@ -1,7 +1,7 @@
 // Starts a Stripe Checkout for one of the three plans:
-//   per_user   $100 AUD per person per month (one unit per person)
-//   agency_10  $500 AUD per month, up to 10 people, shared contact list
-//   agency_20  $1000 AUD per month, up to 20 people, shared contact list
+//   per_user   $399 AUD per person per month (one unit per person)
+//   agency_10  up to 10 people, shared contact list (not currently offered)
+//   agency_20  up to 20 people, shared contact list (not currently offered)
 // Subscribing during the free trial doesn't cost any trial days: Stripe waits
 // until the trial ends before charging.
 import {

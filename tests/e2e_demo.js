@@ -102,38 +102,26 @@ async function until(fn, ms = 10000) { const t = Date.now(); while (Date.now() -
   f = await fillProfile(f, 'Coast Realty', '0400 333 444');
   check('per-agent plan: agent does not see the owner\'s contact', (await f.evaluate(() => data.length)) === 0);
 
-  console.log('5. owner turns on the shared list');
-  await p.click('#menu-btn'); await p.click('#menu [data-act=signout]');
-  await p.fill('#f-signin [name=email]', 'alex@agency.test'); await p.fill('#f-signin [name=password]', 'password1'); await p.click('#f-signin button[type=submit]');
-  f = await crm();
-  await tab('billing'); await snap('billing');
-  await p.click('[data-plan=agency_10]');
-  check('Agency 10 chosen', !!(await until(async () => /Shared contact list is on/.test(await p.textContent('#shared-box')))));
-  await snap('team-shared');
-  const shareBtn = await until(() => p.$('[data-act=share-mine]'), 5000);
-  check('owner is offered to share earlier contacts', !!shareBtn);
-  if (shareBtn) { await shareBtn.click(); await sleep(1500); }
-  f = await until(async () => { const x = await crm(); return x && (await x.evaluate(() => data.length)) === 1 ? x : null; });
-  check('earlier contact now in the shared list', f && (await names(f)) === 'Pat Seller');
-
-  console.log('6. agent sees the shared list');
-  await p.click('#menu-btn'); await p.click('#menu [data-act=signout]');
-  await p.fill('#f-signin [name=email]', 'jo@agency.test'); await p.fill('#f-signin [name=password]', 'password1'); await p.click('#f-signin button[type=submit]');
-  f = await crm();
-  check('agent sees the owner\'s contact', !!(await until(async () => (await names(f)) === 'Pat Seller')));
-  await addContactByClicking(f, 'Lee Buyer', '9 Hill Rd', 'Hill'); await sleep(2500);
-  check('agent adds to the shared list', (await names(f)) === 'Lee Buyer|Pat Seller');
+  console.log('5. each agent keeps their own contacts');
+  await addContactByClicking(f, 'Lee Buyer', '9 Hill Rd', 'Hill'); await sleep(1500);
+  check('agent adds a contact to their own CRM', (await names(f)) === 'Lee Buyer');
+  await p.evaluate(() => window.__shell && window.__shell.pushStats());
   await tab('team'); await snap('team-agent');
   check('agent does not get the dashboard', await p.isHidden('#dash'));
 
-  console.log('7. owner dashboard, subscribe, trial end');
+  console.log('6. owner: billing and dashboard');
   await p.click('#menu-btn'); await p.click('#menu [data-act=signout]');
   await p.fill('#f-signin [name=email]', 'alex@agency.test'); await p.fill('#f-signin [name=password]', 'password1'); await p.click('#f-signin button[type=submit]');
   f = await crm();
-  check('owner sees the agent\'s contact', !!(await until(async () => (await names(f)) === 'Lee Buyer|Pat Seller')));
+  check("owner sees only their own contact, not the agent's", !!(await until(async () => (await names(f)) === 'Pat Seller')));
+  await tab('billing'); await snap('billing');
+  check('billing shows the one per-agent price', /\$399/.test(await p.textContent('#bill-card')) && await p.isHidden('#plans-wrap'));
   await tab('team');
-  check('dashboard shows 2 shared contacts', !!(await until(async () => /Shared contacts\s*2/.test(await p.textContent('#dash-tiles')))), await p.textContent('#dash-tiles'));
+  check('dashboard lists the agent', !!(await until(async () => /Jo Agent/.test(await p.textContent('#dash-table')))), await p.textContent('#dash-table'));
+  check('dashboard shows no client names', !/Lee Buyer/.test(await p.textContent('#tab-team')));
   await snap('dashboard');
+
+  console.log('7. subscribe, trial end');
   await tab('billing'); await p.click('[data-act=subscribe]');
   check('subscribe shows a demo message', !!(await until(async () => /simulated/i.test(await p.textContent('#toast')))));
   check('top bar shows subscribed', !!(await until(async () => /billing starts|Subscribed/.test(await p.textContent('#plan-chip')))), await p.textContent('#plan-chip'));

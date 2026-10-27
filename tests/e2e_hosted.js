@@ -45,7 +45,7 @@ const serverState = async (email, key) => (await db.query(
   const F = await newUser(browser, { label: 'visitor' });
   await F.goto(BASE + '/');
   check('the front page opens at the site address', /Every street/.test(await F.textContent('h1')));
-  check('…with the plans and prices', /\$100/.test(await F.textContent('#pricing')) && /\$500/.test(await F.textContent('#pricing')) && /\$1,000/.test(await F.textContent('#pricing')));
+  check('…with the price, one plan', /\$399/.test(await F.textContent('#pricing')) && !/\$100|\$500|\$1,000/.test(await F.textContent('#pricing')));
   await F.click('header .download');
   check('Download app asks the visitor to sign up or sign in first', !!(await until(() => F.isVisible('#f-signup'))) && /start=download/.test(F.url()) && await F.isVisible('#download-note'));
   await signUp(F, 'Dana Download', 'dana@download.test', 'password123');
@@ -180,7 +180,8 @@ const serverState = async (email, key) => (await db.query(
 
   console.log('billing');
   await A.goto(BASE + '/app.html#billing'); await crmFrame(A);
-  check('billing shows price and trial', /\$100 AUD per agent/.test(await A.textContent('#bill-card')) && /Free trial/.test(await A.textContent('#bill-card')));
+  check('billing shows price and trial', /\$399 AUD per agent/.test(await A.textContent('#bill-card')) && /Free trial/.test(await A.textContent('#bill-card')));
+  check('no other plans are offered', await A.isHidden('#plans-wrap'));
   if (SHOTS) await A.screenshot({ path: SHOTS + '/4-billing.png' });
   await A.click('[data-act=subscribe]');
   await until(() => A.url().includes('checkout=success') || /Subscribed/.test(''), 5000);
