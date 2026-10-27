@@ -25,11 +25,10 @@ var SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
 );
 var PRICES = {
   per_user: env("STRIPE_PRICE_ID"),
-  // $100 AUD per person per month
+  // $399 AUD per person per month
   agency_10: env("STRIPE_PRICE_AGENCY_10"),
-  // $500 AUD per month, up to 10 people
+  // agency plans: not currently offered in the app
   agency_20: env("STRIPE_PRICE_AGENCY_20")
-  // $1000 AUD per month, up to 20 people
 };
 var PLAN_LIMIT = { per_user: null, agency_10: 10, agency_20: 20 };
 var isPlan = (p) => p === "per_user" || p === "agency_10" || p === "agency_20";

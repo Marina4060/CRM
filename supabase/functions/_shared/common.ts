@@ -23,6 +23,18 @@ function secretKey(): string {
   }
 }
 export const SERVICE_KEY = secretKey();
+// every server key the project has (legacy service_role and any new secret keys)
+export function serverKeys(): string[] {
+  const out = [env("SUPABASE_SERVICE_ROLE_KEY")];
+  const raw = env("SUPABASE_SECRET_KEYS");
+  try {
+    const keys = JSON.parse(raw);
+    if (typeof keys === "string") out.push(keys); else out.push(...Object.values(keys ?? {}).map(String));
+  } catch {
+    out.push(raw);
+  }
+  return out.filter(Boolean);
+}
 const STRIPE_KEY = env("STRIPE_SECRET_KEY");
 // the API version the code is written for (where Stripe puts the billing period, etc.)
 const STRIPE_VERSION = "2025-02-24.acacia";

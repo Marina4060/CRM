@@ -17,6 +17,18 @@ function secretKey() {
   }
 }
 var SERVICE_KEY = secretKey();
+function serverKeys() {
+  const out = [env("SUPABASE_SERVICE_ROLE_KEY")];
+  const raw = env("SUPABASE_SECRET_KEYS");
+  try {
+    const keys = JSON.parse(raw);
+    if (typeof keys === "string") out.push(keys);
+    else out.push(...Object.values(keys ?? {}).map(String));
+  } catch {
+    out.push(raw);
+  }
+  return out.filter(Boolean);
+}
 var STRIPE_KEY = env("STRIPE_SECRET_KEY");
 var STRIPE_API = (env("STRIPE_API_BASE") || "https://api.stripe.com") + "/v1";
 var SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
@@ -24,11 +36,10 @@ var SITE_URL = ((u) => u && !/^https?:\/\//i.test(u) ? "https://" + u : u)(
 );
 var PRICES = {
   per_user: env("STRIPE_PRICE_ID"),
-  // $100 AUD per person per month
+  // $399 AUD per person per month
   agency_10: env("STRIPE_PRICE_AGENCY_10"),
-  // $500 AUD per month, up to 10 people
+  // agency plans: not currently offered in the app
   agency_20: env("STRIPE_PRICE_AGENCY_20")
-  // $1000 AUD per month, up to 20 people
 };
 var cors = {
   "Access-Control-Allow-Origin": "*",
@@ -137,8 +148,8 @@ async function removeReceipts(userId) {
 
 // supabase/functions/purge-receipts/index.ts
 handle("purge-receipts", async (req) => {
-  const key = SERVICE_KEY;
-  if (!key || (req.headers.get("Authorization") ?? "") !== `Bearer ${key}`) throw new HttpError(401, "Not allowed.");
+  const auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+  if (!auth || !serverKeys().includes(auth)) throw new HttpError(401, "Not allowed.");
   const body = await req.json().catch(() => ({}));
   const days = Number.isInteger(body.days) && body.days >= 30 ? body.days : 90;
   const data = await db.rpc("receipt_owners_to_purge", { days });

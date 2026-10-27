@@ -13,6 +13,19 @@ function secretKey() {
   }
 }
 var SERVICE_KEY = secretKey();
+// every server key the project has: the legacy service_role key and any new secret keys,
+// so the nightly job works whichever of them is saved in the Vault
+function serverKeys() {
+  const out = [env("SUPABASE_SERVICE_ROLE_KEY")];
+  const raw = env("SUPABASE_SECRET_KEYS");
+  try {
+    const keys = JSON.parse(raw);
+    if (typeof keys === "string") out.push(keys); else out.push(...Object.values(keys ?? {}).map(String));
+  } catch {
+    out.push(raw);
+  }
+  return out.filter(Boolean);
+}
 var cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -57,7 +70,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
     // called on a schedule with the secret key; nobody else can call it
-    if (!SERVICE_KEY || (req.headers.get("Authorization") ?? "") !== `Bearer ${SERVICE_KEY}`) throw new Oops(401, "Not allowed.");
+    const auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
+    if (!auth || !serverKeys().includes(auth)) throw new Oops(401, "Not allowed.");
     const body = await req.json().catch(() => ({}));
     const days = Number.isInteger(body.days) && body.days >= 30 ? body.days : 90;
     const owners = await supa("POST", "/rest/v1/rpc/receipt_owners_to_purge", { days });
