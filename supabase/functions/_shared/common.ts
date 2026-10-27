@@ -35,6 +35,16 @@ export function serverKeys(): string[] {
   }
   return out.filter(Boolean);
 }
+// a key not in that list may still be a real server key (Supabase can hand functions a
+// different copy than the one on the API Keys page), so ask Supabase: only a server key may list users
+export async function isServerKey(key: string): Promise<boolean> {
+  if (serverKeys().includes(key)) return true;
+  const h: Record<string, string> = { apikey: key };
+  if (key.startsWith("eyJ")) h.Authorization = "Bearer " + key;
+  const r = await fetch(SUPABASE_URL + "/auth/v1/admin/users?page=1&per_page=1", { headers: h }).catch(() => null);
+  await r?.body?.cancel();
+  return !!r?.ok;
+}
 const STRIPE_KEY = env("STRIPE_SECRET_KEY");
 // the API version the code is written for (where Stripe puts the billing period, etc.)
 const STRIPE_VERSION = "2025-02-24.acacia";

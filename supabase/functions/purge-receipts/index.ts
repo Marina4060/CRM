@@ -3,12 +3,12 @@
 // Storage files can only be deleted through the Storage API, so this runs as
 // a function. It is called on a schedule with the service role key (see
 // DEPLOY.md step 7); nobody else can call it.
-import { db, handle, HttpError, json, removeReceipts, serverKeys } from "../_shared/common.ts";
+import { db, handle, HttpError, json, removeReceipts, isServerKey } from "../_shared/common.ts";
 
 handle("purge-receipts", async (req) => {
   // the legacy service_role key or one of the new secret keys, whichever the schedule was given
   const auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-  if (!auth || !serverKeys().includes(auth)) throw new HttpError(401, "Not allowed.");
+  if (!auth || !await isServerKey(auth)) throw new HttpError(401, "Not allowed.");
   const body = await req.json().catch(() => ({}));
   const days = Number.isInteger(body.days) && body.days >= 30 ? body.days : 90;
   const data = await db.rpc("receipt_owners_to_purge", { days });

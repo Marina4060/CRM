@@ -26,6 +26,17 @@ function serverKeys() {
   }
   return out.filter(Boolean);
 }
+// a key not in the list above may still be a real server key (Supabase can hand the
+// function a different copy than the one on the API Keys page), so ask Supabase itself:
+// only a server key may list users
+async function isServerKey(key) {
+  if (serverKeys().includes(key)) return true;
+  const h = { apikey: key };
+  if (key.startsWith("eyJ")) h.Authorization = "Bearer " + key;
+  const r = await fetch(SUPABASE_URL + "/auth/v1/admin/users?page=1&per_page=1", { headers: h }).catch(() => null);
+  await r?.body?.cancel();
+  return !!r?.ok;
+}
 var cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -71,7 +82,7 @@ Deno.serve(async (req) => {
   try {
     // called on a schedule with the secret key; nobody else can call it
     const auth = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-    if (!auth || !serverKeys().includes(auth)) throw new Oops(401, "Not allowed.");
+    if (!auth || !await isServerKey(auth)) throw new Oops(401, "Not allowed.");
     const body = await req.json().catch(() => ({}));
     const days = Number.isInteger(body.days) && body.days >= 30 ? body.days : 90;
     const owners = await supa("POST", "/rest/v1/rpc/receipt_owners_to_purge", { days });
