@@ -13,8 +13,8 @@ window.CRM_CONFIG = {
   termsUrl: 'terms.html',
   privacyUrl: 'privacy.html',
   legal: {
-    businessName: '[Your business name]',
-    abn: '[ABN]',
+    businessName: 'MICRM',
+    abn: '18 537 952 610',
     address: '[Business address]',
     email: 'privacy@example.com',            // for privacy requests and complaints
     state: 'Western Australia',              // whose laws and courts apply
