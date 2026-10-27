@@ -15,7 +15,7 @@ window.CRM_CONFIG = {
   legal: {
     businessName: 'MICRM',
     abn: '18 537 952 610',
-    address: '[Business address]',
+    address: 'Ballajura WA 6066',
     email: 'support@micrm.com.au',           // for privacy requests and complaints
     state: 'Western Australia',              // whose laws and courts apply
     gst: 'include GST',                      // 'include GST', 'plus GST' (the front page then shows prices with GST added, as one total)
