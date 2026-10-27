@@ -8,7 +8,7 @@ window.CRM_CONFIG = {
   // prices are set in app.js (PLANS) and shown with GST worked in, following legal.gst below
   agencyPlans: false,   // true offers the Agency 10 / Agency 20 plans (one shared contact list) again
   trialDays: 14,
-  supportEmail: 'support@example.com',
+  supportEmail: 'support@micrm.com.au',
   // the terms of service and privacy policy (web/terms.html, web/privacy.html) fill in these details
   termsUrl: 'terms.html',
   privacyUrl: 'privacy.html',
@@ -16,7 +16,7 @@ window.CRM_CONFIG = {
     businessName: 'MICRM',
     abn: '18 537 952 610',
     address: '[Business address]',
-    email: 'privacy@example.com',            // for privacy requests and complaints
+    email: 'support@micrm.com.au',           // for privacy requests and complaints
     state: 'Western Australia',              // whose laws and courts apply
     gst: 'include GST',                      // 'include GST', 'plus GST' (the front page then shows prices with GST added, as one total)
                                              // or 'no GST' if you're not registered. Check with your accountant.
