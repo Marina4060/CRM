@@ -1113,7 +1113,7 @@
     else if (a === 'export') exportData();
     else if (a === 'download-app') downloadApp(b);
     else if (a === 'delete-account') openDelete();
-    else if (a === 'subscribe') goStripe('create-checkout', { plan: ctx.team.plan });
+    else if (a === 'subscribe') goStripe('create-checkout', { plan: planInfo(ctx.team.plan).id });
     else if (a === 'share-mine') {
       if (!confirm('Add your earlier contacts to the shared list so the whole team can see them? Contacts the team already has are left as they are.')) return;
       b.disabled = true;
@@ -1138,7 +1138,7 @@
     else if (a === 'install' && installPrompt) { installPrompt.prompt(); installPrompt = null; $('#menu-install').hidden = true; }
   });
   $('#blocked-subscribe').addEventListener('click', function () {
-    if (paid(ctx.team)) { show('scr-app'); paintChrome(); location.hash = '#billing'; route(); } else goStripe('create-checkout', { plan: ctx.team.plan });
+    if (paid(ctx.team)) { show('scr-app'); paintChrome(); location.hash = '#billing'; route(); } else goStripe('create-checkout', { plan: planInfo(ctx.team.plan).id });
   });
   $('#blocked-portal').addEventListener('click', openPortal);
 
