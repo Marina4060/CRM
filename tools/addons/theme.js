@@ -18,7 +18,7 @@
   try { LANES.forEach(function(l){ var s = STAGE[l.key]; if(s) l.bar = s[0]; }); } catch (e) {}
   try { Object.keys(STAGE).forEach(function(k){ if(SB[k]){ SB[k].bg = STAGE[k][1]; SB[k].cl = STAGE[k][2]; } }); } catch (e) {}
 
-  // the main buttons are always coral (theme.css); the brand colour from My details
+  // the main buttons are always gold (theme.css); the brand colour from My details
   // still goes on emails, letters and vendor reports
 
   // soft colours by kind of task: people and contacts, planning, insight, money, files

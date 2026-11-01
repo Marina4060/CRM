@@ -158,8 +158,8 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR
     bar: getComputedStyle(document.querySelector('.topbar')).backgroundImage,
     hot: LANES.find((l) => l.key === 'hot').bar,
   }));
-  check(look.add === 'rgb(255, 107, 74)' && look.plain === 'rgba(255, 255, 255, 0.08)' && /14, 63, 76/.test(look.bar) && look.hot === '#D92D20',
-    'Ocean & Coral: teal top bar, coral main actions, glass buttons for the rest, stage colours kept', look);
+  check(look.add === 'rgb(227, 169, 43)' && look.plain === 'rgba(255, 255, 255, 0.08)' && /11, 31, 58/.test(look.bar) && look.hot === '#D92D20',
+    'Midnight & Gold: navy top bar, gold main actions, glass buttons for the rest, stage colours kept', look);
 
   check(errs.length === 0, 'no script errors', errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
