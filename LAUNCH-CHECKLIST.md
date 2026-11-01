@@ -11,6 +11,15 @@
 - Latest website (business details) uploaded to Netlify
 - Full test run in test mode: log in, $399 plan active, add contact, saved online, Manage billing opens
 
+## Next session (before launch)
+- Move contacts to Supabase rows: each contact its own row (like the agency
+  shared list, team_contacts), only changed contacts sent, no overwriting
+  between devices. Keep an offline copy in IndexedDB instead of localStorage
+  (about 5 MB; 4,124 contacts already use about 3.8 MB). One-time automatic
+  move of existing data, tested on a copy first.
+- Ask AI: hide it for launch, or build it properly (key on the server, only
+  the relevant contacts sent, privacy policy updated). Decision pending.
+
 ## Before launch
 1. Register MICRM as a business name with ASIC, linked to the ABN
 2. Insurance: tech professional indemnity + cyber
