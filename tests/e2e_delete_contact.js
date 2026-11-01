@@ -1,5 +1,6 @@
 // Deleting a contact from its card (and everything that points at contacts
-// by number moving with it), plus the hover help on the toolbar buttons,
+// by number moving with it), Import file telling the same address in two
+// suburbs apart, and the hover help on the toolbar buttons,
 // inside the online app (demo build).
 //   node tests/e2e_delete_contact.js http://localhost:8797/_local.html
 const { chromium } = require('playwright');
@@ -85,6 +86,29 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   f = crmFrame();
   for (let i = 0; i < 40; i++) { try { if (await f.evaluate(() => typeof data !== 'undefined' && data.length > 0)) break; } catch (e) {} await sleep(250); f = crmFrame(); }
   check(await f.evaluate(() => data.map((c) => c.n).join() === 'Ann Lee,Cy Tan,Di Moss'), 'still gone after reloading', await f.evaluate(() => data.map((c) => c.n)));
+
+  // ───────── Import file: the same address in two suburbs ─────────
+  await f.evaluate(() => { window.confirm = function () { return true; }; window.alert = function () {}; });
+  const imp = await f.evaluate(() => {
+    const before = data.length;
+    crmImportText(JSON.stringify({ contacts: [
+      { a: '2 Byfield Rd', s: 'Byfield', n: 'Owner not yet verified', suburb: 'Ellenbrook', stage: 'cold', note: '' },
+      { a: '2 Byfield Rd', s: 'Byfield', n: 'Owner not yet verified', suburb: 'Bayswater', stage: 'cold', note: '' },
+      { a: '2 Byfield Rd', s: 'Byfield', n: 'Owner not yet verified', suburb: 'Ellenbrook', stage: 'warm', note: 'second copy' }],
+      activity: { 1: [{ ts: 1, type: 'Called', note: 'Bayswater call' }] },
+      diary: [{ id: 't_imp', task: 'Ring Bayswater owner', contact: 'Owner not yet verified', contactId: 1, date: '-', type: 'upcoming', done: false }] }), 'backup.json');
+    const by = data.filter((c) => c.a === '2 Byfield Rd');
+    const bay = data.findIndex((c) => c.a === '2 Byfield Rd' && c.suburb === 'Bayswater');
+    return { added: data.length - before, subs: by.map((c) => c.suburb).sort().join(), ell: by.find((c) => c.suburb === 'Ellenbrook').stage,
+      act: JSON.stringify(actLog[bay] || []), task: (diaryTasks.find((t) => t.id === 't_imp') || {}).contactId === bay };
+  });
+  check(imp.added === 2 && imp.subs === 'Bayswater,Ellenbrook', 'importing the same address in two suburbs keeps both contacts', imp);
+  check(imp.ell === 'warm', '…while a repeat in the same suburb joins the first (and moves it on)', imp.ell);
+  check(/Bayswater call/.test(imp.act) && imp.task, 'imported call history and diary tasks attach to the right contact', imp);
+  await f.evaluate(() => location.reload()); await sleep(1500);
+  f = crmFrame();
+  for (let i = 0; i < 40; i++) { try { if (await f.evaluate(() => typeof data !== 'undefined' && data.length > 0)) break; } catch (e) {} await sleep(250); f = crmFrame(); }
+  check(await f.evaluate(() => data.filter((c) => c.a === '2 Byfield Rd').length === 2), 'both are still there after reloading');
 
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));

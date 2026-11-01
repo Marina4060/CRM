@@ -9,7 +9,7 @@ copy: the Map view (map.js, with Leaflet bundled from vendor/), Vendor Reports
 (vendor_report.js), Buyers (buyers.js), the Call Runner's missing-details
 tools (callrunner.js), receipts on expenses (receipts.js), the professional
 colours (theme.css, theme.js), hover help on the toolbar buttons (tooltips.js), deleting a contact
-(delete_contact.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
+(delete_contact.js), Import file matching on address and suburb (import.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
 CRM itself (see FIXES), and lets the page reach the map's address finder in
 its Content-Security-Policy (map tiles are images, which the policy already
 allows).
@@ -45,6 +45,7 @@ def block():
         read('fixes.js'),
         read('tooltips.js'),
         read('delete_contact.js'),
+        read('import.js'),
     ]
     for s in scripts:
         if '</script' in s.lower():
@@ -70,6 +71,18 @@ FIXES = [
     # leftovers of the original agency in the AI assistant: sign off as the agent
     ("Sign off as M&I team.';", "Sign off as '+ME.name+', '+ME.agency+'.';"),
     ('M&amp;I AI assistant', 'MICRM AI assistant'),
+    # Reloading kept only one of two contacts with the same owner and address
+    # in different suburbs ("Owner not yet verified, 2 Byfield Rd" in two
+    # suburbs): contacts made in the browser are now told apart by suburb too.
+    ('      keyIndex[k] = i;',
+     "      keyIndex[k] = i; keyIndex[k+'|'+String(c.suburb||'').toLowerCase().trim()] = i;"),
+    ('      if (s.key && keyIndex[s.key] !== undefined) {',
+     "      var sk = s.key ? s.key+'|'+String(s.suburb||'').toLowerCase().trim() : '';\n"
+     "      if (s.isNew && s.key) {\n"
+     "        if (keyIndex[sk] !== undefined) idx = keyIndex[sk];\n"
+     "      } else if (s.key && keyIndex[s.key] !== undefined) {"),
+    ('        var exists = keyIndex[s.key];', '        var exists = keyIndex[sk];'),
+    ('          keyIndex[s.key]=data.length-1;', '          keyIndex[s.key]=data.length-1; keyIndex[sk]=data.length-1;'),
 ]
 
 
