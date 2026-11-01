@@ -355,5 +355,7 @@
   };
 
   // for tests and the AI assistant
-  window.__vendorReports = { stats: function(L, we){ var o = weekEnd; weekEnd = we || weekEnd; var s = stats(L); weekEnd = o; return s; }, prices: prices, sameAddr: sameAddr, db: function(){ return DB; } };
+  window.__vendorReports = { stats: function(L, we){ var o = weekEnd; weekEnd = we || weekEnd; var s = stats(L); weekEnd = o; return s; }, prices: prices, sameAddr: sameAddr, db: function(){ return DB; },
+    // a contact was deleted and the ones after it moved up: fn(old id) gives the new id, or null
+    remapContacts: function(fn){ DB.list.forEach(function(L){ if(L.contactId != null) L.contactId = fn(L.contactId); }); save(); } };
 })();
