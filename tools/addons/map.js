@@ -65,7 +65,7 @@
     + '.mv-pop button.go{background:#16324f;color:#fff;border-color:#16324f}'
     + 'body.crm-map-on #board,body.crm-map-on #summary,body.crm-map-on #tbl-view{display:none !important}'
     + '@media (max-width:700px){#crm-map{height:calc(100vh - 260px)}#map-view{padding:8px}}';
-  document.head.appendChild(css);
+  css.setAttribute('data-addon', '1'); document.head.appendChild(css);
 
   var view = document.createElement('div'); view.id = 'map-view';
   view.innerHTML = '<div class="mv-bar" id="mv-legend"></div>'

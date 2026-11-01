@@ -157,7 +157,7 @@
     + '.vr-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:12px;border-top:0.5px solid var(--bd2)}'
     + '.vr-note{background:#FFF9DB;border:0.5px solid #E8C848;border-radius:8px;padding:8px 10px;font-size:12px;color:#5c4b00}'
     + '@media (max-width:600px){#vr-body{padding:12px}.vr-grid{grid-template-columns:1fr 1fr}}';
-  document.head.appendChild(css);
+  css.setAttribute('data-addon', '1'); document.head.appendChild(css);
   var wrap = document.createElement('div'); wrap.id = 'vr-wrap';
   wrap.innerHTML = '<div id="vr-box"><div id="vr-head"></div><div id="vr-body"></div></div>';
   wrap.addEventListener('click', function(e){ if(e.target === wrap) window.closeVendorReports(); });

@@ -57,7 +57,7 @@
   if(!window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
   var box = document.createElement('div');
-  box.id = 'mi-tip';
+  box.id = 'mi-tip'; box.setAttribute('data-addon', '1');
   box.setAttribute('role', 'tooltip');
   box.style.cssText = 'position:fixed;z-index:100000;max-width:260px;padding:8px 11px;border-radius:8px;background:#0B1F3A;color:#fff;'
     + 'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);'

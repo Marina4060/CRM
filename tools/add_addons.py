@@ -33,6 +33,7 @@ def read(*p):
 
 def block():
     scripts = [
+        read('leftovers.js'),
         read('vendor', 'leaflet.js'),
         # keep any page variable called L untouched; the map uses CRM_LEAFLET
         'window.CRM_LEAFLET = L.noConflict();',

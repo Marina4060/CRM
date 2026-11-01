@@ -181,7 +181,7 @@
     + '.by-sugg{background:#F5F8FC;border:1px solid #D9E3EF;border-radius:12px;padding:10px 14px;margin-bottom:12px}'
     + '.by-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--bd3);font-size:13px;flex-wrap:wrap}'
     + '@media (max-width:600px){#by-body{padding:12px}#by-head{padding:12px}.by-grid{grid-template-columns:1fr 1fr}.by-note{flex-direction:column;align-items:stretch}}';
-  document.head.appendChild(css);
+  css.setAttribute('data-addon', '1'); document.head.appendChild(css);
   var wrap = document.createElement('div'); wrap.id = 'by-wrap';
   wrap.innerHTML = '<div id="by-box"><div id="by-head"></div><div id="by-body"></div></div>';
   wrap.addEventListener('click', function(e){ if(e.target === wrap) window.closeBuyers(); });

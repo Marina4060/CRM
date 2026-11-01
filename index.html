@@ -11539,6 +11539,9 @@ body{background:var(--crm-canvas)}
 .vtab{color:var(--crm-ink2) !important}
 .vtab.on{background:#fff !important;color:var(--crm-ink) !important;box-shadow:0 1px 2px rgba(16,24,40,.1)}
 #save-badge{background:rgba(255,255,255,.12) !important;color:#fff !important}
+/* the suburb buttons wrap onto as many rows as they need instead of running off the screen */
+.topbar .vtabs:has(> #sub-all){flex-wrap:wrap;flex-basis:100%;max-width:100%;border-radius:14px;row-gap:4px;margin-left:0}
+.topbar .vtabs:has(> #sub-all) .vtab{flex:0 0 auto;white-space:nowrap}
 
 /* summary tiles */
 .sm{background:#fff !important;border:1px solid var(--crm-line);border-radius:10px !important}
@@ -11603,6 +11606,28 @@ html,body{max-width:100%;overflow-x:hidden}
 }
 
 </style>
+<script>
+/* ══ A SAVED COPY STARTS CLEAN ══
+   Export / Save writes the page as it is on screen, so a saved file already
+   holds the buttons, windows and styles the add-ons made last time (the Map
+   tab, Vendor Reports, ...). They are removed here, before the add-ons run,
+   so each appears once.
+   Built in by tools/add_addons.py (runs before the other add-ons). */
+(function(){
+  ['vt-map', 'map-view', 'vr-wrap', 'vr-open-btn', 'by-wrap', 'mi-tip', 'exp-receipt-file', 'exp-receipt-group', 'rcpt-modal']
+    .forEach(function(id){ var n; while((n = document.getElementById(id))) n.remove(); });
+  [].slice.call(document.querySelectorAll('[data-addon]')).forEach(function(n){ n.remove(); });
+  // things the add-ons put at the end of the page come after these scripts in a
+  // saved file, so they are only there once the page has loaded: keep the new one
+  // (the first, made by the add-ons as they ran) and drop the saved copies
+  document.addEventListener('DOMContentLoaded', function(){
+    ['mi-tip', 'vr-wrap', 'by-wrap', 'exp-receipt-file', 'rcpt-modal'].forEach(function(id){
+      [].slice.call(document.querySelectorAll('[id="' + id + '"]')).slice(1).forEach(function(n){ n.remove(); });
+    });
+  });
+})();
+
+</script>
 <script>
 /* @preserve
  * Leaflet 1.9.4, a JS library for interactive maps. https://leafletjs.com
@@ -11728,7 +11753,7 @@ window.CRM_LEAFLET = L.noConflict();
     + '.mv-pop button.go{background:#16324f;color:#fff;border-color:#16324f}'
     + 'body.crm-map-on #board,body.crm-map-on #summary,body.crm-map-on #tbl-view{display:none !important}'
     + '@media (max-width:700px){#crm-map{height:calc(100vh - 260px)}#map-view{padding:8px}}';
-  document.head.appendChild(css);
+  css.setAttribute('data-addon', '1'); document.head.appendChild(css);
 
   var view = document.createElement('div'); view.id = 'map-view';
   view.innerHTML = '<div class="mv-bar" id="mv-legend"></div>'
@@ -12102,7 +12127,7 @@ window.CRM_LEAFLET = L.noConflict();
     + '.vr-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:12px;border-top:0.5px solid var(--bd2)}'
     + '.vr-note{background:#FFF9DB;border:0.5px solid #E8C848;border-radius:8px;padding:8px 10px;font-size:12px;color:#5c4b00}'
     + '@media (max-width:600px){#vr-body{padding:12px}.vr-grid{grid-template-columns:1fr 1fr}}';
-  document.head.appendChild(css);
+  css.setAttribute('data-addon', '1'); document.head.appendChild(css);
   var wrap = document.createElement('div'); wrap.id = 'vr-wrap';
   wrap.innerHTML = '<div id="vr-box"><div id="vr-head"></div><div id="vr-body"></div></div>';
   wrap.addEventListener('click', function(e){ if(e.target === wrap) window.closeVendorReports(); });
@@ -12490,7 +12515,7 @@ window.CRM_LEAFLET = L.noConflict();
     + '.by-sugg{background:#F5F8FC;border:1px solid #D9E3EF;border-radius:12px;padding:10px 14px;margin-bottom:12px}'
     + '.by-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--bd3);font-size:13px;flex-wrap:wrap}'
     + '@media (max-width:600px){#by-body{padding:12px}#by-head{padding:12px}.by-grid{grid-template-columns:1fr 1fr}.by-note{flex-direction:column;align-items:stretch}}';
-  document.head.appendChild(css);
+  css.setAttribute('data-addon', '1'); document.head.appendChild(css);
   var wrap = document.createElement('div'); wrap.id = 'by-wrap';
   wrap.innerHTML = '<div id="by-box"><div id="by-head"></div><div id="by-body"></div></div>';
   wrap.addEventListener('click', function(e){ if(e.target === wrap) window.closeBuyers(); });
@@ -12852,6 +12877,33 @@ window.CRM_LEAFLET = L.noConflict();
       BOOK.lastDone = t; BOOK.startMonth = t.slice(0, 7); saveBook();
     }
   } catch (e) {}
+
+  // Suburb names: "Drive Somewhere" is Somewhere with the end of the
+  // street name stuck to it (from an older import), and "all" is no suburb.
+  // A street word at the front is dropped when the rest is a suburb other
+  // contacts are already in.
+  try {
+    if(typeof data !== 'undefined' && data.length){
+      var WORD = /^(drive|dr|road|rd|street|st|way|avenue|ave|court|ct|place|pl|crescent|cres|close|cl|lane|ln|parade|pde|terrace|tce|grove|gv|circle|cir|loop|boulevard|bvd|rise|chase|mews|approach|link|gardens|gdns|entrance|square|sq|retreat|vista|ridge|green|walk|glen|highway|hwy)\s+(.+)$/i;
+      var have = {};
+      data.forEach(function(c){ var s = String(c.suburb || '').trim(); if(s && !WORD.test(s)) have[s.toLowerCase()] = s; });
+      var fixed = 0;
+      data.forEach(function(c){
+        var s = String(c.suburb || '').trim(), m = WORD.exec(s);
+        if(m && have[m[2].toLowerCase()]){ c.suburb = have[m[2].toLowerCase()]; fixed++; }
+        else if(/^all$/i.test(s)){
+          c.suburb = (typeof rpSuburbFor === 'function' && c.a) ? (rpSuburbFor({ raw: c.a, rawLine: c.a }) || '') : '';
+          if(/^all$/i.test(c.suburb)) c.suburb = '';
+          fixed++;
+        }
+      });
+      if(fixed){
+        saveToStorage();
+        if(typeof rebuildSuburbTabs === 'function') rebuildSuburbTabs();
+        if(typeof renderCurrent === 'function') renderCurrent();
+      }
+    }
+  } catch (e) {}
 })();
 
 </script>
@@ -12915,7 +12967,7 @@ window.CRM_LEAFLET = L.noConflict();
   if(!window.matchMedia || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
 
   var box = document.createElement('div');
-  box.id = 'mi-tip';
+  box.id = 'mi-tip'; box.setAttribute('data-addon', '1');
   box.setAttribute('role', 'tooltip');
   box.style.cssText = 'position:fixed;z-index:100000;max-width:260px;padding:8px 11px;border-radius:8px;background:#0B1F3A;color:#fff;'
     + 'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);'
