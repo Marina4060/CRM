@@ -8,16 +8,16 @@
 - Nightly clean-ups: purge-expired-crm-data (3:30) and purge-expired-receipts (3:45), tested 200
 - Business details in web/config.js: MICRM, ABN 18 537 952 610, Ballajura WA 6066, Western Australia
 - Business accounts moved off the work email; two-step login on
+- Latest website (business details) uploaded to Netlify
+- Full test run in test mode: log in, $399 plan active, add contact, saved online, Manage billing opens
 
 ## Before launch
-1. Upload the latest website zip to Netlify (business details)
-2. Full test run in test mode: sign up, subscribe with card 4242 4242 4242 4242, use the CRM, cancel
-3. Register MICRM as a business name with ASIC, linked to the ABN
-4. Insurance: tech professional indemnity + cyber
-5. Lawyer review of web/terms.html and web/privacy.html
-6. Supabase Pro (daily backups), the week before launch
-7. Stripe live mode: recreate the $399 price and the webhook, update STRIPE_* secrets
-8. Launch day: set legal.effectiveDate in web/config.js, Netlify visibility Public, Supabase sign-ups on
+1. Register MICRM as a business name with ASIC, linked to the ABN
+2. Insurance: tech professional indemnity + cyber
+3. Lawyer review of web/terms.html and web/privacy.html
+4. Supabase Pro (daily backups), the week before launch
+5. Stripe live mode: recreate the $399 price and the webhook, update STRIPE_* secrets
+6. Launch day: set legal.effectiveDate in web/config.js, Netlify visibility Public, Supabase sign-ups on
 
 ## After launch
 - iPhone (App Store) and Android (Google Play) apps, sign-in only
