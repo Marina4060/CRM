@@ -155,9 +155,11 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR
   const look = await f.evaluate(() => ({
     add: getComputedStyle(document.querySelector('.topbar [onclick="openAddContact()"]')).backgroundColor,
     plain: getComputedStyle(document.querySelector('.topbar [onclick="openExp()"]')).backgroundColor,
+    bar: getComputedStyle(document.querySelector('.topbar')).backgroundImage,
     hot: LANES.find((l) => l.key === 'hot').bar,
   }));
-  check(look.add === 'rgb(31, 58, 95)' && look.plain === 'rgb(251, 245, 234)' && look.hot === '#D92D20', 'main actions use the accent, other buttons soft colours (Expenses: sand), stage colours updated', look);
+  check(look.add === 'rgb(255, 107, 74)' && look.plain === 'rgba(255, 255, 255, 0.08)' && /14, 63, 76/.test(look.bar) && look.hot === '#D92D20',
+    'Ocean & Coral: teal top bar, coral main actions, glass buttons for the rest, stage colours kept', look);
 
   check(errs.length === 0, 'no script errors', errs);
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

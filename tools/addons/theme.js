@@ -1,7 +1,7 @@
 /* ══ Professional colours: the parts set in code ══
-   The stage colours used by the board, table, badges and map pins, the
-   accent taken from the agent's brand colour, and which top-bar buttons are
-   the main actions. Runs before the map, so its pins use these colours.
+   The stage colours used by the board, table, badges and map pins, and
+   which top-bar buttons are the main actions. Runs before the map, so its
+   pins use these colours.
    Built in by tools/add_addons.py; the rest is in theme.css. */
 (function(){
   var STAGE = {
@@ -18,18 +18,8 @@
   try { LANES.forEach(function(l){ var s = STAGE[l.key]; if(s) l.bar = s[0]; }); } catch (e) {}
   try { Object.keys(STAGE).forEach(function(k){ if(SB[k]){ SB[k].bg = STAGE[k][1]; SB[k].cl = STAGE[k][2]; } }); } catch (e) {}
 
-  // the accent: the brand colour from My details, if it is dark enough for white text on it
-  try {
-    var b = window.ME && ME.brand, m = /^#([0-9a-f]{6})$/i.exec(b || '');
-    if(m && b.toUpperCase() !== '#185FA5'){
-      var n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, bl = n & 255;
-      var lum = (0.2126 * r + 0.7152 * g + 0.0722 * bl) / 255;
-      if(lum < 0.55){
-        document.documentElement.style.setProperty('--crm-accent', b);
-        document.documentElement.style.setProperty('--crm-accent-soft', 'rgba(' + r + ',' + g + ',' + bl + ',.12)');
-      }
-    }
-  } catch (e) {}
+  // the main buttons are always coral (theme.css); the brand colour from My details
+  // still goes on emails, letters and vendor reports
 
   // soft colours by kind of task: people and contacts, planning, insight, money, files
   var SOFT = {

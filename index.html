@@ -11496,43 +11496,46 @@ svg.leaflet-image-layer.leaflet-interactive path {
 		}
 	}
 
-/* ══ Professional colours ══
-   One accent colour (the agent's brand colour from My details, navy by
-   default) for the main actions, quiet neutral buttons for everything else,
-   and a calmer set of stage colours. Many buttons carry their colours in a
+/* ══ Colours: Ocean & Coral ══
+   A deep teal top bar with light "glass" buttons, bright coral for the main
+   actions (Call Runner, Add Contact), a sunny Today button, a pale sea-grey
+   background and calm stage colours. Many buttons carry their colours in a
    style="" attribute, so these rules need !important. */
 :root{
-  --crm-accent:#1F3A5F; --crm-accent-soft:#EAF0F7;
+  --crm-accent:#FF6B4A; --crm-accent-soft:rgba(255,107,74,.14);
+  --crm-bar:#0E3F4C; --crm-bar2:#145466; --crm-today:#FFB347;
   --crm-ink:#101828; --crm-ink2:#475467; --crm-ink3:#98A2B3;
-  --crm-line:#E4E7EC; --crm-line2:#D0D5DD; --crm-canvas:#F5F7FA;
-  --bg3:#F5F7FA; --t1:#101828; --t2:#475467; --t3:#667085;
+  --crm-line:#E4E7EC; --crm-line2:#D0D5DD; --crm-canvas:#EEF5F5;
+  --bg3:#EEF5F5; --t1:#101828; --t2:#475467; --t3:#667085;
 }
 body{background:var(--crm-canvas)}
 
-/* top bar */
-.topbar{background:#fff !important;border-bottom:1px solid var(--crm-line) !important;box-shadow:none !important}
-.logo,.logo span{color:var(--crm-ink) !important;text-shadow:none !important}
-.topbar .cal-btn-top,.topbar .diary-open-btn,.topbar .ai-btn{
-  background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important;
+/* top bar: deep teal, light text */
+.topbar{background:linear-gradient(180deg,var(--crm-bar),var(--crm-bar2)) !important;border-bottom:0 !important;box-shadow:0 2px 8px rgba(14,63,76,.18) !important}
+.topbar .logo,.topbar .logo span{color:#fff !important;text-shadow:none !important}
+.topbar .logo span{color:var(--crm-accent) !important}
+.topbar .pill{background:rgba(255,255,255,.1) !important;color:#fff !important;border-color:rgba(255,255,255,.25) !important}
+.topbar div[style*="1D9E75"]{color:#FFC2B3 !important}
+.topbar button[onclick="clearStorage()"]{color:#FFC2B3 !important;border-color:rgba(255,194,179,.5) !important}
+/* every other top-bar button is light glass on the teal */
+.topbar .cal-btn-top,.topbar .diary-open-btn,.topbar .ai-btn,.topbar [class*="soft-"]{
+  background:rgba(255,255,255,.08) !important;color:#E8EEF7 !important;border:1px solid rgba(255,255,255,.18) !important;
   font-weight:500 !important;border-radius:8px !important;box-shadow:none !important;transform:none !important}
-.topbar .cal-btn-top:not([class*="soft-"]):not(.crm-primary):not(.crm-today):hover,.topbar .diary-open-btn:not([class*="soft-"]):not(.crm-primary):not(.crm-today):hover,.topbar .ai-btn:not([class*="soft-"]):not(.crm-primary):not(.crm-today):hover{background:#F9FAFB !important;border-color:#98A2B3 !important}
-/* soft colours, one per kind of task (set by theme.js); the main actions keep the accent */
-.topbar .soft-blue{background:#EEF4FB !important;color:#2B4C7E !important;border-color:#D3E2F4 !important}
-.topbar .soft-green{background:#EDF7F1 !important;color:#2F6B4F !important;border-color:#CFE8DA !important}
-.topbar .soft-lilac{background:#F3F1FA !important;color:#5B4B8A !important;border-color:#E0DAF2 !important}
-.topbar .soft-sand{background:#FBF5EA !important;color:#7A5A1E !important;border-color:#EFE0C2 !important}
-.topbar .soft-rose{background:#FBF1F3 !important;color:#8A3B52 !important;border-color:#F0D6DD !important}
-.topbar .soft-grey{background:#F4F5F7 !important;color:#475467 !important;border-color:#E1E4E8 !important}
-.topbar [class*="soft-"]:hover{filter:brightness(.97)}
-.topbar .crm-primary{background:var(--crm-accent) !important;color:#fff !important;border-color:var(--crm-accent) !important;font-weight:600 !important}
-.topbar .crm-primary:hover{filter:brightness(1.1)}
-.topbar .crm-today{background:#FFF7E0 !important;color:#7A5A1E !important;border:1px solid #F2DFA8 !important}
-.search{border:1px solid var(--crm-line2) !important;box-shadow:none !important;border-radius:8px !important}
+.topbar .cal-btn-top:not(.crm-primary):not(.crm-today):hover,.topbar .diary-open-btn:not(.crm-primary):not(.crm-today):hover,.topbar .ai-btn:not(.crm-primary):not(.crm-today):hover{background:rgba(255,255,255,.18) !important;border-color:rgba(255,255,255,.35) !important}
+/* the main actions */
+.topbar .crm-primary{background:var(--crm-accent) !important;color:#fff !important;border-color:var(--crm-accent) !important;font-weight:600 !important;box-shadow:0 2px 10px rgba(255,107,74,.4) !important}
+.topbar .crm-primary:hover{filter:brightness(1.08)}
+.topbar .crm-today{background:var(--crm-today) !important;color:#3D2600 !important;border:1px solid var(--crm-today) !important;font-weight:600 !important}
+.topbar .crm-today:hover{filter:brightness(1.05)}
+.search{background:#fff !important;border:1px solid var(--crm-line2) !important;box-shadow:none !important;border-radius:8px !important}
 .search:focus{border-color:var(--crm-accent) !important;box-shadow:0 0 0 3px var(--crm-accent-soft) !important}
+.topbar .vtabs{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.18) !important}
+.topbar .vtab{color:#C9D8DD !important}
+.topbar .vtab.on{background:#fff !important;color:var(--crm-bar) !important;box-shadow:0 1px 2px rgba(16,24,40,.15)}
 .vtabs{background:#F2F4F7 !important;border:1px solid var(--crm-line) !important}
 .vtab{color:var(--crm-ink2) !important}
 .vtab.on{background:#fff !important;color:var(--crm-ink) !important;box-shadow:0 1px 2px rgba(16,24,40,.1)}
-#save-badge{background:#ECFDF3 !important;color:#067647 !important}
+#save-badge{background:rgba(255,255,255,.12) !important;color:#fff !important}
 
 /* summary tiles */
 .sm{background:#fff !important;border:1px solid var(--crm-line);border-radius:10px !important}
@@ -11610,9 +11613,9 @@ window.CRM_LEAFLET = L.noConflict();
 </script>
 <script>
 /* ══ Professional colours: the parts set in code ══
-   The stage colours used by the board, table, badges and map pins, the
-   accent taken from the agent's brand colour, and which top-bar buttons are
-   the main actions. Runs before the map, so its pins use these colours.
+   The stage colours used by the board, table, badges and map pins, and
+   which top-bar buttons are the main actions. Runs before the map, so its
+   pins use these colours.
    Built in by tools/add_addons.py; the rest is in theme.css. */
 (function(){
   var STAGE = {
@@ -11629,18 +11632,8 @@ window.CRM_LEAFLET = L.noConflict();
   try { LANES.forEach(function(l){ var s = STAGE[l.key]; if(s) l.bar = s[0]; }); } catch (e) {}
   try { Object.keys(STAGE).forEach(function(k){ if(SB[k]){ SB[k].bg = STAGE[k][1]; SB[k].cl = STAGE[k][2]; } }); } catch (e) {}
 
-  // the accent: the brand colour from My details, if it is dark enough for white text on it
-  try {
-    var b = window.ME && ME.brand, m = /^#([0-9a-f]{6})$/i.exec(b || '');
-    if(m && b.toUpperCase() !== '#185FA5'){
-      var n = parseInt(m[1], 16), r = n >> 16, g = (n >> 8) & 255, bl = n & 255;
-      var lum = (0.2126 * r + 0.7152 * g + 0.0722 * bl) / 255;
-      if(lum < 0.55){
-        document.documentElement.style.setProperty('--crm-accent', b);
-        document.documentElement.style.setProperty('--crm-accent-soft', 'rgba(' + r + ',' + g + ',' + bl + ',.12)');
-      }
-    }
-  } catch (e) {}
+  // the main buttons are always coral (theme.css); the brand colour from My details
+  // still goes on emails, letters and vendor reports
 
   // soft colours by kind of task: people and contacts, planning, insight, money, files
   var SOFT = {
@@ -12921,7 +12914,7 @@ window.CRM_LEAFLET = L.noConflict();
   var box = document.createElement('div');
   box.id = 'mi-tip';
   box.setAttribute('role', 'tooltip');
-  box.style.cssText = 'position:fixed;z-index:100000;max-width:260px;padding:8px 11px;border-radius:8px;background:#16324f;color:#fff;'
+  box.style.cssText = 'position:fixed;z-index:100000;max-width:260px;padding:8px 11px;border-radius:8px;background:#0E3F4C;color:#fff;'
     + 'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);'
     + 'pointer-events:none;opacity:0;transition:opacity .12s;left:0;top:0';
   document.body.appendChild(box);

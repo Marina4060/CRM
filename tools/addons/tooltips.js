@@ -59,7 +59,7 @@
   var box = document.createElement('div');
   box.id = 'mi-tip';
   box.setAttribute('role', 'tooltip');
-  box.style.cssText = 'position:fixed;z-index:100000;max-width:260px;padding:8px 11px;border-radius:8px;background:#16324f;color:#fff;'
+  box.style.cssText = 'position:fixed;z-index:100000;max-width:260px;padding:8px 11px;border-radius:8px;background:#0E3F4C;color:#fff;'
     + 'font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18);'
     + 'pointer-events:none;opacity:0;transition:opacity .12s;left:0;top:0';
   document.body.appendChild(box);
