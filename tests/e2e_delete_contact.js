@@ -92,13 +92,13 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   const imp = await f.evaluate(() => {
     const before = data.length;
     crmImportText(JSON.stringify({ contacts: [
-      { a: '2 Byfield Rd', s: 'Byfield', n: 'Owner not yet verified', suburb: 'Ellenbrook', stage: 'cold', note: '' },
-      { a: '2 Byfield Rd', s: 'Byfield', n: 'Owner not yet verified', suburb: 'Bayswater', stage: 'cold', note: '' },
-      { a: '2 Byfield Rd', s: 'Byfield', n: 'Owner not yet verified', suburb: 'Ellenbrook', stage: 'warm', note: 'second copy' }],
+      { a: '12 Example St', s: 'Example', n: 'Owner not yet verified', suburb: 'Ellenbrook', stage: 'cold', note: '' },
+      { a: '12 Example St', s: 'Example', n: 'Owner not yet verified', suburb: 'Bayswater', stage: 'cold', note: '' },
+      { a: '12 Example St', s: 'Example', n: 'Owner not yet verified', suburb: 'Ellenbrook', stage: 'warm', note: 'second copy' }],
       activity: { 1: [{ ts: 1, type: 'Called', note: 'Bayswater call' }] },
       diary: [{ id: 't_imp', task: 'Ring Bayswater owner', contact: 'Owner not yet verified', contactId: 1, date: '-', type: 'upcoming', done: false }] }), 'backup.json');
-    const by = data.filter((c) => c.a === '2 Byfield Rd');
-    const bay = data.findIndex((c) => c.a === '2 Byfield Rd' && c.suburb === 'Bayswater');
+    const by = data.filter((c) => c.a === '12 Example St');
+    const bay = data.findIndex((c) => c.a === '12 Example St' && c.suburb === 'Bayswater');
     return { added: data.length - before, subs: by.map((c) => c.suburb).sort().join(), ell: by.find((c) => c.suburb === 'Ellenbrook').stage,
       act: JSON.stringify(actLog[bay] || []), task: (diaryTasks.find((t) => t.id === 't_imp') || {}).contactId === bay };
   });
@@ -108,7 +108,7 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   await f.evaluate(() => location.reload()); await sleep(1500);
   f = crmFrame();
   for (let i = 0; i < 40; i++) { try { if (await f.evaluate(() => typeof data !== 'undefined' && data.length > 0)) break; } catch (e) {} await sleep(250); f = crmFrame(); }
-  check(await f.evaluate(() => data.filter((c) => c.a === '2 Byfield Rd').length === 2), 'both are still there after reloading');
+  check(await f.evaluate(() => data.filter((c) => c.a === '12 Example St').length === 2), 'both are still there after reloading');
 
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));

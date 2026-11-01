@@ -72,7 +72,7 @@ FIXES = [
     ("Sign off as M&I team.';", "Sign off as '+ME.name+', '+ME.agency+'.';"),
     ('M&amp;I AI assistant', 'MICRM AI assistant'),
     # Reloading kept only one of two contacts with the same owner and address
-    # in different suburbs ("Owner not yet verified, 2 Byfield Rd" in two
+    # in different suburbs ("Owner not yet verified, 12 Example St" in two
     # suburbs): contacts made in the browser are now told apart by suburb too.
     ('      keyIndex[k] = i;',
      "      keyIndex[k] = i; keyIndex[k+'|'+String(c.suburb||'').toLowerCase().trim()] = i;"),

@@ -1,5 +1,5 @@
 /* ══ IMPORT FILE: match on address AND suburb ══
-   The same street address can be in two suburbs (2 Byfield Rd in two
+   The same street address can be in two suburbs (12 Example St in two
    suburbs are two different houses), so a contact in the file now joins an
    existing contact only when the suburb agrees too. When either side has no
    suburb, the address alone decides, as before.
