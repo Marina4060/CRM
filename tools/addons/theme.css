@@ -17,7 +17,7 @@ body{background:var(--crm-canvas)}
 .topbar .cal-btn-top,.topbar .diary-open-btn,.topbar .ai-btn{
   background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important;
   font-weight:500 !important;border-radius:8px !important;box-shadow:none !important;transform:none !important}
-.topbar .cal-btn-top:hover,.topbar .diary-open-btn:hover,.topbar .ai-btn:hover{background:#F9FAFB !important;border-color:#98A2B3 !important}
+.topbar .cal-btn-top:not([class*="soft-"]):not(.crm-primary):not(.crm-today):hover,.topbar .diary-open-btn:not([class*="soft-"]):not(.crm-primary):not(.crm-today):hover,.topbar .ai-btn:not([class*="soft-"]):not(.crm-primary):not(.crm-today):hover{background:#F9FAFB !important;border-color:#98A2B3 !important}
 /* soft colours, one per kind of task (set by theme.js); the main actions keep the accent */
 .topbar .soft-blue{background:#EEF4FB !important;color:#2B4C7E !important;border-color:#D3E2F4 !important}
 .topbar .soft-green{background:#EDF7F1 !important;color:#2F6B4F !important;border-color:#CFE8DA !important}
