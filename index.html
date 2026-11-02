@@ -13221,7 +13221,8 @@ window.CRM_LEAFLET = L.noConflict();
    underneath; Import All now says how many were saved and closes the window.
    Pasted lines like "Name, phone, street, suburb" and ID4me rows find the right
    existing card by the person's name and add only the phone or email to it: an
-   ID4me address (maybe an old home or a rental) is never added or matched on.
+   ID4me address (maybe an old home or a rental) is never matched on, and only
+   added when you choose "Also add as another property" or "Add as a property".
    Built in by tools/add_addons.py. */
 (function(){
   var tab = document.getElementById('ac-tab-bulk'), box = document.getElementById('ac-bulk');
@@ -13457,6 +13458,108 @@ window.CRM_LEAFLET = L.noConflict();
   if(typeof rpMakeNew === 'function'){
     var _mk = rpMakeNew;
     window.rpMakeNew = function(k){ try { var p = _rpParsed[k]; if(p && p._idmAddr && !p.raw) p.raw = p._idmAddr; } catch (e) {} return _mk.apply(this, arguments); };
+  }
+
+  // ── ID4me rows: the suburb from the row, and "also add as another property" ──
+  // The address on an ID4me row is not added on its own (it may be an old home or a
+  // rental), but it can be: for a person already in the CRM, "Also add as another
+  // property" adds it owned by them as well as putting their phone and email on their
+  // card; for someone not in the CRM, "Add as a property owned by ..." adds it.
+  var _also = {};
+  function rowSuburb(txt, addr){
+    var lines = String(txt || '').split(/\n/), key = String(addr || '').toLowerCase();
+    for(var i = 0; i < lines.length; i++){
+      if(key && lines[i].toLowerCase().indexOf(key) >= 0){
+        var m = lines[i].match(/([A-Za-z][A-Za-z'\- ]{2,30}?)\s*,?\s+(?:WA|NSW|VIC|QLD|SA|TAS|NT|ACT)\s*\d{4}/);
+        return { line: lines[i], sub: m ? title(m[1].replace(/^.*\b(court|ct|street|st|road|rd|way|avenue|ave|place|pl|drive|dr|crescent|cres|close|cl|lane|parade|pde|terrace|tce|grove|loop|circle|boulevard|approach|gardens|entrance|retreat|mews|rise|chase|link|square|vista|view)\b\s*/i, '').trim()) : '' };
+      }
+    }
+    return null;
+  }
+  var _parse2 = window.rpParse;
+  window.rpParse = function(txt){
+    var out = _parse2.apply(this, arguments);
+    out.forEach(function(r){
+      if(!r || !r._idmAddr) return;
+      var f = rowSuburb(txt, r._idmAddr);
+      if(f){ r._idmLine = f.line; if(f.sub) r._idmSuburb = f.sub; }
+    });
+    return out;
+  };
+  if(typeof rpNewRecord === 'function'){
+    var _new = rpNewRecord;
+    window.rpNewRecord = function(p){
+      var rec = _new.apply(this, arguments);
+      if(rec){
+        if(p && p._idmSuburb && (p._suburbGuessed || !rec.suburb || /^all$/i.test(rec.suburb))){
+          rec.suburb = p._idmSuburb; p._suburbGuessed = false;
+          rec.note = String(rec.note || '').replace(/!! Suburb not read from the paste - set to [^,.]*, check it\. ?/, '');
+        }
+        if(/^all$/i.test(rec.suburb || '')) rec.suburb = '';   // never the "All suburbs" filter as a suburb
+      }
+      return rec;
+    };
+  }
+  window.rpAlsoNew = function(k){ if(_also[k]) delete _also[k]; else _also[k] = true; rpRenderPreview(); };
+  window.rpAllNew = function(ks){ ks.forEach(function(k){ var p = _rpParsed[k]; if(p && p._idmAddr && !p.raw) p.raw = p._idmAddr; _rpForceNew[k] = true; }); rpRenderPreview(); };
+  if(typeof rpPreview === 'function'){
+    var _prev = rpPreview;
+    window.rpPreview = function(){ _also = {}; return _prev.apply(this, arguments); };
+  }
+  if(typeof rpRenderPreview === 'function'){
+    var _render = rpRenderPreview;
+    window.rpRenderPreview = function(){
+      var r = _render.apply(this, arguments);
+      try {
+        var box = document.getElementById('rp-result'); if(!box) return r;
+        var unmatched = [];
+        [].slice.call(box.querySelectorAll('button[onclick^="rpMakeNew("]')).forEach(function(b){
+          var k = parseInt((b.getAttribute('onclick').match(/\d+/) || [])[0], 10), p = _rpParsed[k];
+          if(!p || !p._idmAddr) return;
+          var addr = title(p._idmAddr) + (p._idmSuburb ? ', ' + p._idmSuburb : '');
+          if(/add as a property anyway/i.test(b.textContent)){
+            // someone not in the CRM yet
+            b.textContent = '➕ Add ' + addr + ' as a property owned by ' + (p.names[0] || 'them');
+            b.style.cssText = 'margin-left:6px;font-size:11px;padding:3px 8px;cursor:pointer;background:#E3A92B;color:#1A1203;border:0;border-radius:6px;font-weight:600';
+            var cell = b.parentNode; if(cell && cell.firstChild && cell.firstChild.nodeType === 3) cell.firstChild.nodeValue = 'Not in your CRM yet. The address on the row may be an old home or a rental, so it was not added by itself. ';
+            unmatched.push(k);
+          } else {
+            // found by name: phone and email go on their card; the address can be added as well
+            var a = document.createElement('button');
+            a.textContent = _also[k] ? '✓ ' + addr + ' will be added too (undo)' : '➕ Also add ' + addr + ' as another property';
+            a.setAttribute('onclick', 'rpAlsoNew(' + k + ')');
+            a.style.cssText = 'margin-left:6px;font-size:11px;padding:3px 8px;cursor:pointer;border-radius:6px;font-weight:600;' + (_also[k] ? 'background:#E3F6EC;color:#085D3A;border:1px solid #9FD8B8' : 'background:#E3A92B;color:#1A1203;border:0');
+            b.parentNode.insertBefore(a, b);
+            b.remove();   // "instead" would drop the phone and email from their card
+          }
+        });
+        if(unmatched.length > 1){
+          var all = document.createElement('button');
+          all.textContent = '➕ Add all ' + unmatched.length + ' people not in your CRM as new properties';
+          all.setAttribute('onclick', 'rpAllNew([' + unmatched.join(',') + '])');
+          all.style.cssText = 'margin:6px 0;font-size:12px;padding:6px 12px;cursor:pointer;background:#E3A92B;color:#1A1203;border:0;border-radius:7px;font-weight:700';
+          box.insertBefore(all, box.firstChild);
+        }
+      } catch (e) {}
+      return r;
+    };
+  }
+  if(typeof rpApply === 'function'){
+    var _apply = rpApply;
+    window.rpApply = function(){
+      try {
+        Object.keys(_also).forEach(function(k){
+          var p = _rpParsed[k]; if(!p || !p._idmAddr) return;
+          var q = {}; Object.keys(p).forEach(function(f){ q[f] = p[f]; });
+          q.raw = p._idmAddr; q.rawLine = p._idmLine || p._idmAddr; q._idm = false; q._contactOnly = false;
+          var rec = rpNewRecord(q), sub = rec ? String(rec.suburb || '').toLowerCase() : '';
+          var key = rec ? (typeof rpKey === 'function' ? rpKey(rec.a) : rec.a.toLowerCase()) : '';
+          if(rec && !data.some(function(c){ return String(c.suburb || '').toLowerCase() === sub && (typeof rpKey === 'function' ? rpKey(c.a) : String(c.a).toLowerCase()) === key; })) _rpNew.push(q);
+        });
+      } catch (e) {}
+      _also = {};
+      return _apply.apply(this, arguments);
+    };
   }
 })();
 

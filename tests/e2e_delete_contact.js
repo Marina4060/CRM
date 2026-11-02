@@ -146,6 +146,19 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   check(/0400 333 444/.test(id4.bea.ph), '"Name, phone, street, suburb" finds the right card', id4.bea);
   check(!id4.nobody, 'an ID4me row for someone not in the CRM adds nothing (no address is added)');
 
+  // ───────── ID4me row: also add the address as another property, in the suburb on the row ─────────
+  await f.evaluate(() => {
+    data.push({ id: data.length, s: 'Probe', a: '4 Probe Tce', n: 'Pat Kim Coowner & Sam Lee Prober', ph: '-', em: '-', note: '', stage: 'cold', date: '', suburb: 'Scarborough' });
+    saveToStorage(); openRPImport();
+    document.getElementById('rp-paste').value = 'Sam Lee Prober\t17 Probe Court, Testville WA 6999\tprober@example.com';
+    rpPreview();
+  });
+  check(await f.evaluate(() => !!document.querySelector('#rp-result button[onclick^="rpAlsoNew"]')), 'a person found by name is offered "Also add as another property"');
+  await f.evaluate(() => { document.querySelector('#rp-result button[onclick^="rpAlsoNew"]').click(); rpApply(); var m = document.getElementById('rp-modal'); if (m) m.remove(); });
+  const also = await f.evaluate(() => ({ card: data.find((c) => c.a === '4 Probe Tce'), extra: data.find((c) => /^17 Probe C/.test(c.a)) }));
+  check(/prober@example.com/.test(also.card.em) && also.extra && also.extra.n === 'Sam Lee Prober' && also.extra.suburb === 'Testville',
+    '…which keeps the email on their card and adds the address owned by them, in the suburb on the row', also);
+
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));
   check(!missing.length, 'every toolbar button has a description', missing);
