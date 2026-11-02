@@ -7,8 +7,9 @@
    quarterly review's "look again later" list, the call list's extras and
    vendor reports. Appointments and tasks for the deleted contact are kept
    (they still show the name) but no longer link to a contact.
-   Contacts that came built into the CRM file itself can't be deleted here:
-   they would come back the next time the file opens.
+   A contact built into a saved CRM file (the file version) is hidden for good
+   instead (marked removed, like an old owner), because cutting it out of the
+   file would mix up everyone's history.
    Built in by tools/add_addons.py. */
 (function(){
   if(typeof data === 'undefined' || typeof openC !== 'function') return;
@@ -52,13 +53,18 @@
 
   window.deleteContact = function(id){
     var c = data[id]; if(!c) return;
-    if(typeof FILE_CONTACT_COUNT !== 'undefined' && id < FILE_CONTACT_COUNT){
-      alert('This contact is built into this copy of the CRM file, so it can’t be deleted here. Move it to Declined instead.');
-      return;
-    }
     var who = (c.n || 'this contact') + (c.a ? ' at ' + c.a : '');
     if(!confirm('Delete ' + who + '?\n\nTheir notes and call history are deleted too. This can’t be undone.')) return;
-    remove(id);
+    if(typeof FILE_CONTACT_COUNT !== 'undefined' && id < FILE_CONTACT_COUNT){
+      // built into this copy of the file: cutting it out would mix up everyone's history,
+      // so it is hidden for good instead (like an old owner who has moved on)
+      var d = new Date();
+      c.stage = 'removed';
+      c.note = '[' + String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getFullYear()).slice(-2) + '] Deleted.\n' + (c.note || '');
+      saveToStorage();
+    } else {
+      remove(id);
+    }
     try { if(typeof logSession === 'function') logSession('Deleted contact: ' + who); } catch (e) {}
     closeM();
     renderCurrent();

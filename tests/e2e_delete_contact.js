@@ -181,6 +181,15 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   check(id4r.added === 0, 'nothing new is created and no ID4me address is added', id4r.added);
   await f.evaluate(() => closeAddContact());
 
+  // ───────── edit the street and suburb on the card; an empty appraisal date stays empty ─────────
+  const ed = await f.evaluate(() => {
+    data.push({ id: data.length, s: 'Vista', a: '12 Vista Probe', n: 'Edit Prober', ph: '-', em: '-', note: '', stage: 'cold', date: '', suburb: 'Drive Scarborough' });
+    var id = data.length - 1; saveToStorage(); openC(id);
+    document.getElementById('e-suburb').value = 'Scarborough'; document.getElementById('e-street').value = 'Vista';
+    saveC(id); return data[id];
+  });
+  check(ed.suburb === 'Scarborough' && ed.stage === 'cold' && !ed.apprDate, 'the card edits the suburb; a contact with no appraisal date is not moved to Appraised on saving', ed);
+
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));
   check(!missing.length, 'every toolbar button has a description', missing);

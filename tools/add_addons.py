@@ -9,7 +9,7 @@ copy: the Map view (map.js, with Leaflet bundled from vendor/), Vendor Reports
 (vendor_report.js), Buyers (buyers.js), the Call Runner's missing-details
 tools (callrunner.js), receipts on expenses (receipts.js), the professional
 colours (theme.css, theme.js), hover help on the toolbar buttons (tooltips.js), deleting a contact
-(delete_contact.js), Import file matching on address and suburb (import.js),
+(delete_contact.js), street and suburb on the contact card (edit_more.js), Import file matching on address and suburb (import.js),
 a whole street in one go from the Add Contacts window (street_import.js),
 phones and emails from ID4me onto existing cards (id4me.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
 CRM itself (see FIXES), and lets the page reach the map's address finder in
@@ -48,6 +48,7 @@ def block():
         read('fixes.js'),
         read('tooltips.js'),
         read('delete_contact.js'),
+        read('edit_more.js'),
         read('import.js'),
         read('street_import.js'),
         read('id4me.js'),
