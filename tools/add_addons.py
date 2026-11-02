@@ -10,7 +10,8 @@ copy: the Map view (map.js, with Leaflet bundled from vendor/), Vendor Reports
 tools (callrunner.js), receipts on expenses (receipts.js), the professional
 colours (theme.css, theme.js), hover help on the toolbar buttons (tooltips.js), deleting a contact
 (delete_contact.js), Import file matching on address and suburb (import.js),
-a whole street in one go from the Add Contacts window (street_import.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
+a whole street in one go from the Add Contacts window (street_import.js),
+phones and emails from ID4me onto existing cards (id4me.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
 CRM itself (see FIXES), and lets the page reach the map's address finder in
 its Content-Security-Policy (map tiles are images, which the policy already
 allows).
@@ -49,6 +50,7 @@ def block():
         read('delete_contact.js'),
         read('import.js'),
         read('street_import.js'),
+        read('id4me.js'),
     ]
     for s in scripts:
         if '</script' in s.lower():

@@ -1,7 +1,7 @@
 // Deleting a contact from its card (and everything that points at contacts
 // by number moving with it), Import file telling the same address in two
 // suburbs apart, adding a street by house numbers, pasting ID4me rows and
-// contact lines onto the right card, and the hover help on the toolbar buttons,
+// contact lines onto the right card, the ID4me details tab, and the hover help on the toolbar buttons,
 // inside the online app (demo build).
 //   node tests/e2e_delete_contact.js http://localhost:8797/_local.html
 const { chromium } = require('playwright');
@@ -158,6 +158,28 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   const also = await f.evaluate(() => ({ card: data.find((c) => c.a === '4 Probe Tce'), extra: data.find((c) => /^17 Probe C/.test(c.a)) }));
   check(/prober@example.com/.test(also.card.em) && also.extra && also.extra.n === 'Sam Lee Prober' && also.extra.suburb === 'Testville',
     '…which keeps the email on their card and adds the address owned by them, in the suburb on the row', also);
+
+  // ───────── ID4me details tab: phones and emails onto existing cards, nothing new ─────────
+  const id4n0 = await f.evaluate(() => {
+    [['Gil Ann Prober', '21 Probe Way', 'Scarborough'], ['Pat Kim & Hal Prober', '23 Probe Way', 'Scarborough'], ['Ivy Prober', '25 Probe Way', 'Scarborough'], ['Ivy Prober', '27 Far Road', 'Otherton']]
+      .forEach(function (r) { data.push({ id: data.length, s: 'Probe', a: r[1], n: r[0], ph: '-', em: '-', note: '', stage: 'cold', date: '', suburb: r[2] }); });
+    saveToStorage(); renderCurrent(); return data.length;
+  });
+  await f.evaluate(() => openAddContactManual()); await sleep(200);
+  await f.click('#ac-tab-id4me');
+  await f.fill('#id4-paste', ['PROBER, GIL ANN', '12 OLD STREET ELSEWHERE WA 6000', '0400 211 211', 'gil@example.com', '',
+    'HAL PROBER', '7 RENTAL LANE SCARBOROUGH WA 6019', '0400 233 233', '',
+    'Ivy Prober\t01/01/1970\t20 Some Street, Otherton WA 6200\t0400 255 255', 'NOBODY PROBER', '50 NEW PLACE SCARBOROUGH WA 6019', '0400 277 277'].join('\n'));
+  await f.click('#id4-find'); await sleep(200);
+  check(/Add to 3 cards/.test(await f.textContent('#id4-go')), 'the ID4me tab finds three people by name (one written surname first) and skips the one not in the CRM', await f.textContent('#id4-go'));
+  await f.evaluate(() => { window.alert = function () {}; }); await f.click('#id4-go'); await sleep(200);
+  const id4r = await f.evaluate((n0) => ({ gil: data.find((c) => c.a === '21 Probe Way'), hal: data.find((c) => c.a === '23 Probe Way'), ivyHere: data.find((c) => c.a === '25 Probe Way'),
+    ivyThere: data.find((c) => c.a === '27 Far Road'), added: data.length - n0 }), id4n0);
+  check(/0400 211 211/.test(id4r.gil.ph) && /gil@example.com/.test(id4r.gil.em) && /0400 233 233/.test(id4r.hal.ph) && !/0400 211 211/.test(id4r.hal.ph),
+    '…each person\u2019s own phone and email go on their own card', id4r);
+  check(/0400 255 255/.test(id4r.ivyThere.ph) && id4r.ivyHere.ph === '-', 'two contacts with the same name: the one in the suburb on the ID4me row is picked', id4r);
+  check(id4r.added === 0, 'nothing new is created and no ID4me address is added', id4r.added);
+  await f.evaluate(() => closeAddContact());
 
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));
