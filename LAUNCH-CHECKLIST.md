@@ -11,6 +11,18 @@
 - Latest website (business details) uploaded to Netlify
 - Full test run in test mode: log in, $399 plan active, add contact, saved online, Manage billing opens
 
+## Supabase: to do later (while we are still testing the CRM)
+- Upload the latest CRM to Storage → app: delete the old crm.html and
+  version.json, upload the new ones. The newest is version 2026-11-02-26e6b48
+  (whole street tab, stages stick, suburbs wrap, Midnight & Gold, Delete
+  contact, hover help, import by address and suburb). crm.html is index.html
+  from this repository; Claude makes a fresh version.json each time.
+- When ready: upgrade to Supabase Pro for daily backups (week before launch).
+- With the Stripe live switch: replace STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+  and STRIPE_PRICE_ID in Edge Functions → Secrets with the live ones.
+- Launch day: Authentication → turn sign-ups back on.
+- Nightly clean-ups are set up and tested (nothing to do).
+
 ## Next session (before launch)
 - Move contacts to Supabase rows: each contact its own row (like the agency
   shared list, team_contacts), only changed contacts sent, no overwriting
