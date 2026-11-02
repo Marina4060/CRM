@@ -190,6 +190,15 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   });
   check(ed.suburb === 'Scarborough' && ed.stage === 'cold' && !ed.apprDate, 'the card edits the suburb; a contact with no appraisal date is not moved to Appraised on saving', ed);
 
+  // ───────── a whole street pasted into the typed box goes to the smart paste ─────────
+  await f.evaluate(() => openAddContactManual()); await sleep(150);
+  await f.click('#ac-tab-bulk');
+  await f.fill('#ac-bulk-data', ['31 STREETPASTE WAY TESTVILLE WA 6999', 'ANN STREET PASTER', '33 STREETPASTE WAY TESTVILLE WA 6999', 'BOB STREET PASTER'].join('\n'));
+  await f.evaluate(() => importBulk()); await sleep(250);
+  check(await f.evaluate(() => !!document.getElementById('rp-modal') && /2 new to add/.test(document.getElementById('rp-result').textContent)), 'a whole street pasted into the Whole street box opens the smart paste with both properties ready');
+  await f.evaluate(() => { rpApply(); var m = document.getElementById('rp-modal'); if (m) m.remove(); });
+  check(await f.evaluate(() => data.filter((c) => /Streetpaste Way/.test(c.a) && c.suburb === 'Testville').length === 2), '…and adds them in the suburb from the addresses');
+
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));
   check(!missing.length, 'every toolbar button has a description', missing);

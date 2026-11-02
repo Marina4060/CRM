@@ -13296,6 +13296,18 @@ window.CRM_LEAFLET = L.noConflict();
   if(typeof importBulk === 'function'){
     var _bulk = importBulk;
     window.importBulk = function(){
+      // a whole street copied from somewhere (addresses with the owners on the next lines)
+      // is not "Name, Street, Address" lines: hand it to the smart paste, which reads it
+      var raw = document.getElementById('ac-bulk-data').value;
+      var typed = raw.split('\n').filter(function(l){ if(!l.trim()) return false; try { var p = parseBulkLine(l); return !!(p && p.n && p.s && p.a); } catch (e) { return false; } }).length;
+      if(raw.trim() && !typed){
+        try { if(typeof closeAddContact === 'function') closeAddContact(); } catch (e) {}
+        openRPImport();
+        var ta = document.getElementById('rp-paste'); if(ta) ta.value = raw;
+        rpPreview();
+        document.getElementById('ac-bulk-data').value = '';
+        return;
+      }
       var before = data.length;
       var r = _bulk.apply(this, arguments);
       var added = data.length - before;
@@ -13321,8 +13333,10 @@ window.CRM_LEAFLET = L.noConflict();
       + '<button type="button" id="ac-street-paste" style="padding:9px 14px;border-radius:8px;background:#fff;color:#344054;border:1px solid #D0D5DD;font-size:13px;font-weight:600;cursor:pointer">\uD83D\uDCCB Paste a list or ID4me rows</button>'
       + '<button type="button" id="ac-street-file" style="padding:9px 14px;border-radius:8px;background:#fff;color:#344054;border:1px solid #D0D5DD;font-size:13px;font-weight:600;cursor:pointer">\uD83D\uDCC2 Import a spreadsheet</button>'
       + '</div>'
-      + '<div style="font-size:11.5px;color:#7a6a40;margin-top:10px">Or type them in below, one owner per line.</div>';
+      + '<div style="font-size:11.5px;color:#7a6a40;margin-top:10px">Or paste a whole street, or type one owner per line, in the box below and click Import All.</div>';
     box.insertBefore(t, box.firstChild);
+    var bx = document.getElementById('ac-bulk-data');
+    if(bx) bx.placeholder = 'Paste a whole street here (addresses with the owners), or type one owner per line:\nJohn Smith, 12 Example St, 0412 345 678, john@email.com';
     var close = function(){ try { if(typeof closeAddContact === 'function') closeAddContact(); } catch (e) {} };
     document.getElementById('ac-street-paste').onclick = function(){ close(); openRPImport(); };
     document.getElementById('ac-street-build').onclick = function(){ close(); openStreetBuilder(); };
