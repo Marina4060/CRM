@@ -16,7 +16,7 @@
     'session log': 'Everything you do, recorded automatically: stage moves, edits, calls and emails.',
     'diary': 'Your day sheet: what is booked, who to ring back and your notes.',
     'command centre': 'Find anyone fast: search any name, address, phone or street across every suburb.',
-    '+ add contact': 'Add one owner, or a whole street at once: paste it from RP Data or ID4me on the Whole street tab.',
+    '+ add contact': 'Add one owner, or a whole street at once on the Whole street tab: by house numbers, from a pasted list or a spreadsheet.',
     'backup': 'Save a copy of all your data to this computer, to keep or bring back later.',
     'for sale nearby': 'Other agents’ listings in your area. Pick one to text your contacts on that street.',
     'export / save': 'Download your data: a full copy, an Excel file, or a small safety backup.',

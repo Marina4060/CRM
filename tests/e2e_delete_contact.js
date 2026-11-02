@@ -1,6 +1,7 @@
 // Deleting a contact from its card (and everything that points at contacts
 // by number moving with it), Import file telling the same address in two
-// suburbs apart, and the hover help on the toolbar buttons,
+// suburbs apart, adding a street by house numbers, and the hover help on the
+// toolbar buttons,
 // inside the online app (demo build).
 //   node tests/e2e_delete_contact.js http://localhost:8797/_local.html
 const { chromium } = require('playwright');
@@ -109,6 +110,21 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   f = crmFrame();
   for (let i = 0; i < 40; i++) { try { if (await f.evaluate(() => typeof data !== 'undefined' && data.length > 0)) break; } catch (e) {} await sleep(250); f = crmFrame(); }
   check(await f.evaluate(() => data.filter((c) => c.a === '12 Example St').length === 2), 'both are still there after reloading');
+
+  // ───────── Add a street by house numbers ─────────
+  await f.evaluate(() => openStreetBuilder()); await sleep(200);
+  await f.fill('#sb-name', 'example'); await f.selectOption('#sb-type', 'Way');
+  await f.selectOption('#sb-suburb', 'Scarborough');
+  await f.fill('#sb-from', '1'); await f.fill('#sb-to', '4'); await f.fill('#sb-extra', '1, 2A'); await sleep(150);
+  check(/5 new properties/.test(await f.textContent('#sb-preview')), 'the street builder previews 1-4 plus 2A, with 1 typed twice counted once', await f.textContent('#sb-preview'));
+  await f.click('#sb-go'); await sleep(300);
+  const built = await f.evaluate(() => data.filter((c) => /Example Way$/.test(c.a)).map((c) => c.a + '|' + c.n + '|' + c.suburb));
+  check(built.length === 5 && built.every((x) => /Owner not yet verified\|Scarborough$/.test(x)), '…and adds them as Owner not yet verified in that suburb', built);
+  await f.evaluate(() => openStreetBuilder()); await sleep(200);
+  await f.fill('#sb-name', 'Example'); await f.selectOption('#sb-type', 'Way'); await f.selectOption('#sb-suburb', 'Scarborough');
+  await f.fill('#sb-from', '1'); await f.fill('#sb-to', '6'); await sleep(150);
+  check(/2 new properties.*4 already in your CRM/.test(await f.textContent('#sb-preview')), 'running it again skips the houses already there', await f.textContent('#sb-preview'));
+  await f.evaluate(() => document.getElementById('sb-modal').remove());
 
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));
