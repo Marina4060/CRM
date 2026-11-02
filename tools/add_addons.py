@@ -9,7 +9,8 @@ copy: the Map view (map.js, with Leaflet bundled from vendor/), Vendor Reports
 (vendor_report.js), Buyers (buyers.js), the Call Runner's missing-details
 tools (callrunner.js), receipts on expenses (receipts.js), the professional
 colours (theme.css, theme.js), hover help on the toolbar buttons (tooltips.js), deleting a contact
-(delete_contact.js), Import file matching on address and suburb (import.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
+(delete_contact.js), Import file matching on address and suburb (import.js),
+a whole street in one go from the Add Contacts window (street_import.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
 CRM itself (see FIXES), and lets the page reach the map's address finder in
 its Content-Security-Policy (map tiles are images, which the policy already
 allows).
@@ -47,6 +48,7 @@ def block():
         read('tooltips.js'),
         read('delete_contact.js'),
         read('import.js'),
+        read('street_import.js'),
     ]
     for s in scripts:
         if '</script' in s.lower():
@@ -84,6 +86,21 @@ FIXES = [
      "      } else if (s.key && keyIndex[s.key] !== undefined) {"),
     ('        var exists = keyIndex[s.key];', '        var exists = keyIndex[sk];'),
     ('          keyIndex[s.key]=data.length-1;', '          keyIndex[s.key]=data.length-1; keyIndex[sk]=data.length-1;'),
+    # "removed" (an old owner who has sold and gone) is a stage the agent set too:
+    # without it in this list a saved file re-guessed those contacts from their notes
+    # on opening, and old owners whose notes mention an appraisal came back as Appraised.
+    ("  var LOCKED = ['hold','declined','sold','listed','potential','hot','appraisal','warm','msg','cold'];",
+     "  var LOCKED = ['hold','declined','sold','listed','potential','hot','appraisal','warm','msg','cold','removed'];"),
+    # ...and opening a saved file moved old owners with an SMS or call log in their notes
+    # from "removed" to Message left
+    ("      var protect=['warm','hot','appraisal','listed','sold','declined','potential','hold'];",
+     "      var protect=['warm','hot','appraisal','listed','sold','declined','potential','hold','removed'];"),
+    # Saving a card put a Cold or Message-left contact back to Appraised whenever it had
+    # an appraisal date, so moving it on never stuck. Now only a newly entered date does.
+    ("  data[id].apprDate = document.getElementById('e-appr').value.trim();",
+     "  var _prevAppr = data[id].apprDate || '';\n  data[id].apprDate = document.getElementById('e-appr').value.trim();"),
+    ("  if (data[id].apprDate && (data[id].stage==='cold'||data[id].stage==='msg')) data[id].stage = 'appraisal';",
+     "  if (data[id].apprDate && data[id].apprDate !== _prevAppr && (data[id].stage==='cold'||data[id].stage==='msg')) data[id].stage = 'appraisal';"),
 ]
 
 
