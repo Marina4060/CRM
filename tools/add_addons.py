@@ -112,6 +112,10 @@ FIXES = [
      "  if(oneWay){\n    if(protect.indexOf(c.stage)===-1) c.stage='msg';\n  } else if(/not interested"),
     ("  } else if(/appraisal (done|completed|carried out|delivered|sent|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t)){",
      "  } else if(/appraisal (done|completed|carried out|delivered|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t) && !/offer|cancel|not a live|rebook/.test(t)){"),
+    # Expenses saved in a file only loaded when the browser already had some, so a file
+    # opened on a new computer (or a fresh browser) showed no expenses at all.
+    ("try{ if(_savedExp && Array.isArray(window.__BAKED_EXPENSES)){",
+     "try{ if(Array.isArray(window.__BAKED_EXPENSES) && window.__BAKED_EXPENSES.length){ _savedExp=_savedExp||[];"),
     # Saving a card put a Cold or Message-left contact back to Appraised whenever it had
     # an appraisal date, so moving it on never stuck. Now only a newly entered date does.
     ("  data[id].apprDate = document.getElementById('e-appr').value.trim();",

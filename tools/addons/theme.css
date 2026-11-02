@@ -24,6 +24,14 @@ body{background:var(--crm-canvas)}
   background:rgba(255,255,255,.08) !important;color:#E8EEF7 !important;border:1px solid rgba(255,255,255,.18) !important;
   font-weight:500 !important;border-radius:8px !important;box-shadow:none !important;transform:none !important}
 .topbar .cal-btn-top:not(.crm-primary):not(.crm-today):hover,.topbar .diary-open-btn:not(.crm-primary):not(.crm-today):hover,.topbar .ai-btn:not(.crm-primary):not(.crm-today):hover{background:rgba(255,255,255,.18) !important;border-color:rgba(255,255,255,.35) !important}
+/* each kind of task in its own colour (classes set by theme.js); suburb and view tabs stay plain */
+.topbar .soft-blue{background:rgba(96,165,250,.34) !important;border-color:rgba(147,197,253,.55) !important;color:#E0EDFF !important}
+.topbar .soft-green{background:rgba(52,211,153,.3) !important;border-color:rgba(110,231,183,.5) !important;color:#DDFBEF !important}
+.topbar .soft-lilac{background:rgba(167,139,250,.36) !important;border-color:rgba(196,181,253,.55) !important;color:#EEE8FF !important}
+.topbar .soft-sand{background:rgba(251,191,36,.3) !important;border-color:rgba(252,211,77,.5) !important;color:#FFF3D6 !important}
+.topbar .soft-rose{background:rgba(244,114,182,.32) !important;border-color:rgba(249,168,212,.5) !important;color:#FFE4F1 !important}
+.topbar .soft-grey{background:rgba(255,255,255,.1) !important;border-color:rgba(255,255,255,.28) !important;color:#E8EEF7 !important}
+.topbar [class*="soft-"]:hover{filter:brightness(1.25)}
 /* the main actions */
 .topbar .crm-primary{background:var(--crm-accent) !important;color:var(--crm-accent-ink) !important;border-color:var(--crm-accent) !important;font-weight:600 !important;box-shadow:0 2px 10px rgba(227,169,43,.4) !important}
 .topbar .crm-primary:hover{filter:brightness(1.08)}
