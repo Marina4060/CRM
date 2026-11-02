@@ -13,7 +13,7 @@
 
 ## Supabase: to do later (while we are still testing the CRM)
 - Upload the latest CRM to Storage → app: delete the old crm.html and
-  version.json, upload the new ones. The newest is version 2026-11-02-a43a9bc
+  version.json, upload the new ones. The newest is version 2026-11-02-be5c944
   (street by house numbers, whole street tab, stages stick, suburbs wrap, Midnight & Gold, Delete
   contact, hover help, import by address and suburb). crm.html is index.html
   from this repository; Claude makes a fresh version.json each time.
