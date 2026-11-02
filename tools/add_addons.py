@@ -95,6 +95,10 @@ FIXES = [
     # from "removed" to Message left
     ("      var protect=['warm','hot','appraisal','listed','sold','declined','potential','hold'];",
      "      var protect=['warm','hot','appraisal','listed','sold','declined','potential','hold','removed'];"),
+    # Every Export / Save added another saved-state block and kept the old ones, so the
+    # file grew with each save: the new block now replaces them (it holds everything).
+    ("  html = html.replace('</head>', seed+'\\n</head>');",
+     "  html = html.replace(/<script id=\"baked-state\">try\\{window\\.__BAKED_ACT=[\\s\\S]*?<\\/script>\\n?/g, '').replace('</head>', seed+'\\n</head>');"),
     # Saving a card put a Cold or Message-left contact back to Appraised whenever it had
     # an appraisal date, so moving it on never stuck. Now only a newly entered date does.
     ("  data[id].apprDate = document.getElementById('e-appr').value.trim();",

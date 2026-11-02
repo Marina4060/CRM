@@ -2275,7 +2275,7 @@ function crmBuildExportHTML(){
     + 'window.__BAKED_BAS='+JSON.stringify(typeof basState!=='undefined'?basState:{})+';'
     + 'window.__BAKED_SAVED='+JSON.stringify(new Date().toISOString())+';'
     + '}catch(e){}<\/script>';
-  html = html.replace('</head>', seed+'\n</head>');
+  html = html.replace(/<script id="baked-state">try\{window\.__BAKED_ACT=[\s\S]*?<\/script>\n?/g, '').replace('</head>', seed+'\n</head>');
 
   // sanity check: the new file must contain the last contact we wrote
   var lastA=data.length?esc(data[data.length-1].a):'';
