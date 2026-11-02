@@ -99,6 +99,17 @@ FIXES = [
     # file grew with each save: the new block now replaces them (it holds everything).
     ("  html = html.replace('</head>', seed+'\\n</head>');",
      "  html = html.replace(/<script id=\"baked-state\">try\\{window\\.__BAKED_ACT=[\\s\\S]*?<\\/script>\\n?/g, '').replace('</head>', seed+'\\n</head>');"),
+    # Logging an email or text moved people on by its wording: "Complimentary appraisal
+    # sent" (an offer) counted as an appraisal done, and any email mentioning "appraisal"
+    # or "book" as a conversation (Warm). An email or text you send is now one-way contact
+    # only; and an offer, a cancelled or rebooked appraisal is never an appraisal done.
+    ("  // Explicit signals promote, but only on COMPLETED actions - a mention is not an outcome.\n  if(/not interested",
+     "  // An email or text you send is one-way: it shows neither interest nor an appraisal done\n"
+     "  var oneWay = /email|e-mail|sms|text|newsletter|letter|flyer|brochure|mail ?out/.test(String(type||'').toLowerCase()) && !/repl|respond|answered|spoke|called back/.test(t);\n"
+     "  // Explicit signals promote, but only on COMPLETED actions - a mention is not an outcome.\n"
+     "  if(oneWay){\n    if(protect.indexOf(c.stage)===-1) c.stage='msg';\n  } else if(/not interested"),
+    ("  } else if(/appraisal (done|completed|carried out|delivered|sent|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t)){",
+     "  } else if(/appraisal (done|completed|carried out|delivered|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t) && !/offer|cancel|not a live|rebook/.test(t)){"),
     # Saving a card put a Cold or Message-left contact back to Appraised whenever it had
     # an appraisal date, so moving it on never stuck. Now only a newly entered date does.
     ("  data[id].apprDate = document.getElementById('e-appr').value.trim();",

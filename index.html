@@ -7198,12 +7198,16 @@ function autoUpdateFromActivity(id, type, note, ds){
   // Stages that represent a real relationship are never downgraded by a routine touch.
   var protect = ['hot','warm','appraisal','listed','sold','declined','potential','hold'];
 
+  // An email or text you send is one-way: it shows neither interest nor an appraisal done
+  var oneWay = /email|e-mail|sms|text|newsletter|letter|flyer|brochure|mail ?out/.test(String(type||'').toLowerCase()) && !/repl|respond|answered|spoke|called back/.test(t);
   // Explicit signals promote, but only on COMPLETED actions - a mention is not an outcome.
-  if(/not interested|no thanks|do not contact|don't contact|remove me|declined|not selling/.test(t)){
+  if(oneWay){
+    if(protect.indexOf(c.stage)===-1) c.stage='msg';
+  } else if(/not interested|no thanks|do not contact|don't contact|remove me|declined|not selling/.test(t)){
     c.stage='declined';
   } else if(/authority signed|signed authority|now listed|listing signed|went on market/.test(t)){
     c.stage='listed';
-  } else if(/appraisal (done|completed|carried out|delivered|sent|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t)){
+  } else if(/appraisal (done|completed|carried out|delivered|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t) && !/offer|cancel|not a live|rebook/.test(t)){
     c.stage='appraisal';
   } else if(/ready to sell|selling now|wants to sell now|listing soon|list next month|proceed with listing/.test(t)){
     c.stage='hot';
