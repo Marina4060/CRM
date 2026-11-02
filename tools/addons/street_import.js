@@ -6,6 +6,9 @@
    suburb, matches what is already here and shows a preview first), or import
    a spreadsheet or saved file. The typed list (one owner per line) stays
    underneath; Import All now says how many were saved and closes the window.
+   Pasted lines like "Name, phone, street, suburb" and ID4me rows find the right
+   existing card by the person's name and add only the phone or email to it: an
+   ID4me address (maybe an old home or a rental) is never added or matched on.
    Built in by tools/add_addons.py. */
 (function(){
   var tab = document.getElementById('ac-tab-bulk'), box = document.getElementById('ac-bulk');
@@ -40,7 +43,7 @@
       + 'or paste a list of owners and addresses from your own spreadsheet or notes. Properties already in your CRM are never added twice.</div>'
       + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
       + '<button type="button" id="ac-street-build" style="padding:9px 16px;border-radius:8px;background:#E3A92B;color:#1A1203;border:0;font-size:13px;font-weight:700;cursor:pointer">\uD83C\uDFE0 Add a street by house numbers</button>'
-      + '<button type="button" id="ac-street-paste" style="padding:9px 14px;border-radius:8px;background:#fff;color:#344054;border:1px solid #D0D5DD;font-size:13px;font-weight:600;cursor:pointer">\uD83D\uDCCB Paste a list</button>'
+      + '<button type="button" id="ac-street-paste" style="padding:9px 14px;border-radius:8px;background:#fff;color:#344054;border:1px solid #D0D5DD;font-size:13px;font-weight:600;cursor:pointer">\uD83D\uDCCB Paste a list or ID4me rows</button>'
       + '<button type="button" id="ac-street-file" style="padding:9px 14px;border-radius:8px;background:#fff;color:#344054;border:1px solid #D0D5DD;font-size:13px;font-weight:600;cursor:pointer">\uD83D\uDCC2 Import a spreadsheet</button>'
       + '</div>'
       + '<div style="font-size:11.5px;color:#7a6a40;margin-top:10px">Or type them in below, one owner per line.</div>';
@@ -62,7 +65,8 @@
       if(d && d.tagName === 'DIV') d.innerHTML = 'Paste owners and addresses from your own spreadsheet, notes or an email: a whole street, a single property, '
         + 'or rows of names with phones and emails. One property per line works best, for example <b>12 EXAMPLE WAY SUBURB WA 6000</b> with the owner on the next line. '
         + '<b>New properties are added</b> with the street and suburb worked out from the address. Properties already in your CRM only have their gaps filled, '
-        + 'and you see a preview before anything is written.';
+        + 'and you see a preview before anything is written.<br><b>ID4me rows</b> (name, date of birth, address, phones, emails): each person is found by their name '
+        + 'and only their phones and emails are added to their card. The address on the row is never added, as it may be an old home or a rental.';
       var ta = document.getElementById('rp-paste'); if(ta) ta.placeholder = 'Paste your list here...';
     }
     return r;
@@ -156,4 +160,89 @@
     };
     setTimeout(function(){ document.getElementById('sb-name').focus(); }, 30);
   };
+
+  // ── Paste a list: "Name, phone, street, suburb" finds the right card ──
+  // A line without an address used to read the street and suburb as part of the
+  // person's name, so it matched nobody. The street and suburb are now taken out
+  // of the name and used to pick the right contact; a line with a house number
+  // and street is matched on that address like any other.
+  var STREETWORD = /\b(road|rd|street|st|way|avenue|ave|place|pl|drive|dr|court|ct|crescent|cres|close|cl|lane|ln|parade|pde|terrace|tce|grove|gr|gv|circle|cir|circuit|loop|boulevard|bvd|rise|chase|link|approach|gardens|entrance|retreat|mews|square|highway|hwy|vista|ridge|green|walk|glen|ramble|view|turn|glade|promenade|esplanade|bend|meander|outlook|heights)\b\.?$/i;
+  var PH = /\b0[45]\d{2}\s?\d{3}\s?\d{3}\b|\b0[2378]\s?\d{4}\s?\d{4}\b|\(0\d\)\s?\d{4}\s?\d{4}/g, EM = /[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/g;
+  function suburbs(){
+    var o = {};
+    data.forEach(function(c){ if(c.suburb) o[String(c.suburb).toLowerCase().trim()] = 1; });
+    try { JSON.parse(localStorage.getItem('crm_extra_suburbs') || '[]').forEach(function(x){ o[String(x).toLowerCase().trim()] = 1; }); } catch (e) {}
+    return o;
+  }
+  function wordsOf(x){ return String(x || '').toLowerCase().replace(/[^a-z' \-]/g, ' ').split(/\s+/).filter(function(w){ return w.length > 1 && !STREETWORD.test(w); }); }
+  if(typeof rpParse === 'function'){
+    var _parse = rpParse;
+    window.rpParse = function(txt){
+      var out = _parse.apply(this, arguments), subs = suburbs();
+      out.forEach(function(r){
+        if(!r || !r._contactOnly || !r.rawLine) return;
+        var fields = String(r.rawLine).replace(EM, ' ').replace(PH, ' ').split(/[,\t;|]|\s{2,}/).map(function(f){ return f.replace(/\b(name|phone|mobile|mob|ph|email|e-mail|street|suburb|address)\s*[:\-]/ig, ' ').replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+        if(fields.length < 2) return;
+        var name = '', street = '', suburb = '', addr = '';
+        fields.forEach(function(f){
+          var low = f.toLowerCase();
+          if(subs[low] || /^(wa|nsw|vic|qld|sa|tas|nt|act)?\s*\d{4}$/i.test(f)){ if(subs[low]) suburb = f; return; }
+          var bits = f.split(/\s+/), lastSub = '';
+          // "Testing Way Sampleville" or "Sampleville" at the end of a street field
+          for(var n = 3; n >= 1 && !lastSub; n--){ var tail = bits.slice(-n).join(' ').toLowerCase(); if(bits.length > n && subs[tail]){ lastSub = bits.slice(-n).join(' '); bits = bits.slice(0, -n); } }
+          var rest = bits.join(' ');
+          if(STREETWORD.test(rest)){
+            if(lastSub) suburb = lastSub;
+            if(/^\d+[A-Za-z]?(\/\d+[A-Za-z]?)?\s/.test(rest)) addr = rest; else street = rest;
+            return;
+          }
+          if(!name && /^[A-Za-z][A-Za-z'\-\.&]*(\s+[A-Za-z'\-\.&]+){1,6}$/.test(f)) name = f;
+        });
+        if(name) r.names = [name];
+        if(street) r._streetHint = street;
+        if(suburb) r._suburbHint = suburb;
+        if(addr){ r.raw = addr.toUpperCase(); r._contactOnly = false; r._idm = true; if(suburb) r.rawLine = addr + ' ' + suburb; }
+      });
+      // An ID4me row (or a pasted contact line) carries the PERSON's address, which may be
+      // an old home or a rental. It is matched on the person's name first; the address only
+      // helps choose between two people with exactly the same name, and is never added.
+      out.forEach(function(r){
+        if(!r || !r._idm || !r.raw) return;
+        r._idmAddr = r.raw;
+        if(!r._streetHint){ var m = String(r.raw).match(/^\S+\s+(.+)$/); if(m){ r._streetHint = m[1]; r._hintWeak = true; } }
+        r.raw = '';
+      });
+      return out;
+    };
+  }
+  if(typeof rpNameCandidates === 'function'){
+    var _cands = rpNameCandidates;
+    window.rpNameCandidates = function(p){
+      var hits = _cands.apply(this, arguments);
+      if(!p || !(p._streetHint || p._suburbHint)) return hits;
+      var st = wordsOf(p._streetHint), sub = String(p._suburbHint || '').toLowerCase().trim();
+      var fits = function(di){
+        var c = data[di]; if(!c) return false;
+        if(sub && String(c.suburb || '').toLowerCase().trim() !== sub) return false;
+        var where = ' ' + String((c.s || '') + ' ' + (c.a || '')).toLowerCase().replace(/[^a-z' \-]/g, ' ') + ' ';
+        return st.every(function(w){ return where.indexOf(' ' + w + ' ') >= 0; });
+      };
+      var narrowed = hits.filter(fits);
+      if(narrowed.length){ if(narrowed.length === 1) p._surnameOnly = false; return narrowed; }
+      // no name match at all: the surname at that street and suburb (only for a street
+      // typed on the line, not an ID4me address, which may be an old home)
+      if(p._hintWeak) return hits;
+      var sur = (p.names[0] || '').toLowerCase().replace(/[^a-z' \-]/g, ' ').trim().split(/\s+/).pop();
+      var found = [];
+      if(sur && sur.length > 2) data.forEach(function(c, di){ if(c.stage !== 'removed' && fits(di) && (' ' + String(c.n || '').toLowerCase() + ' ').indexOf(' ' + sur + ' ') >= 0) found.push(di); });
+      if(found.length === 1){ p._surnameOnly = false; return found; }
+      return found.length ? found : hits;
+    };
+  }
+
+  // "add as a property anyway" on an ID4me row: it needs its address back
+  if(typeof rpMakeNew === 'function'){
+    var _mk = rpMakeNew;
+    window.rpMakeNew = function(k){ try { var p = _rpParsed[k]; if(p && p._idmAddr && !p.raw) p.raw = p._idmAddr; } catch (e) {} return _mk.apply(this, arguments); };
+  }
 })();

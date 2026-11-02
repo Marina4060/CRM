@@ -1,7 +1,7 @@
 // Deleting a contact from its card (and everything that points at contacts
 // by number moving with it), Import file telling the same address in two
-// suburbs apart, adding a street by house numbers, and the hover help on the
-// toolbar buttons,
+// suburbs apart, adding a street by house numbers, pasting ID4me rows and
+// contact lines onto the right card, and the hover help on the toolbar buttons,
 // inside the online app (demo build).
 //   node tests/e2e_delete_contact.js http://localhost:8797/_local.html
 const { chromium } = require('playwright');
@@ -125,6 +125,26 @@ function check(ok, what, extra) { if (ok) pass++; else fail++; console.log((ok ?
   await f.fill('#sb-from', '1'); await f.fill('#sb-to', '6'); await sleep(150);
   check(/2 new properties.*4 already in your CRM/.test(await f.textContent('#sb-preview')), 'running it again skips the houses already there', await f.textContent('#sb-preview'));
   await f.evaluate(() => document.getElementById('sb-modal').remove());
+
+  // ───────── Paste a list: ID4me rows add phones and emails to the right card ─────────
+  await f.evaluate(() => {
+    [['Alex John Tester', '1 Probe Way'], ['Someone Else', '12 Rental Street'], ['Bea Mary Tester', '3 Probe Way']].forEach(function (r) {
+      data.push({ id: data.length, s: r[1].split(' ')[1], a: r[1], n: r[0], ph: '-', em: '-', note: '', stage: 'cold', date: '', suburb: 'Scarborough' });
+    });
+    saveToStorage();
+    openRPImport();
+    document.getElementById('rp-paste').value = [
+      'Bea Mary Tester, 0400 333 444, Probe Way, Scarborough',
+      'Alex John Tester\t01/01/1970\t12 Rental Street SCARBOROUGH WA 6019\t0400 111 222\talex@example.com',
+      'Nobody Known\t03/03/1990\t50 New Place SCARBOROUGH WA 6019\t0400 555 666'].join('\n');
+    rpPreview(); rpApply();
+    var m = document.getElementById('rp-modal'); if (m) m.remove();
+  });
+  const id4 = await f.evaluate(() => ({ alex: data.find((c) => c.n === 'Alex John Tester'), other: data.find((c) => c.n === 'Someone Else'), bea: data.find((c) => c.n === 'Bea Mary Tester'),
+    nobody: data.some((c) => /New Place|Nobody Known/.test(c.a + c.n)) }));
+  check(/0400 111 222/.test(id4.alex.ph) && /alex@example.com/.test(id4.alex.em) && id4.other.ph === '-', 'an ID4me row adds the phone and email to the person (found by name), not to whoever owns the address on the row', id4);
+  check(/0400 333 444/.test(id4.bea.ph), '"Name, phone, street, suburb" finds the right card', id4.bea);
+  check(!id4.nobody, 'an ID4me row for someone not in the CRM adds nothing (no address is added)');
 
   // ───────── hover help ─────────
   const missing = await f.$$eval('.topbar button', (bs) => bs.filter((x) => x.offsetParent && !window.__tips.forButton(x)).map((x) => x.textContent.trim()));
