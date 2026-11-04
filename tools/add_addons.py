@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""Build the add-on features into the CRM page.
+
+    python3 tools/add_addons.py index.html
+
+Adds the add-on features from tools/addons/ just before </body>, between
+ADDONS markers, so running it again replaces them rather than adding a second
+copy: the Map view (map.js, with Leaflet bundled from vendor/), Vendor Reports
+(vendor_report.js), Buyers (buyers.js), the Call Runner's missing-details
+tools (callrunner.js), receipts on expenses (receipts.js), the professional
+colours (theme.css, theme.js), hover help on the toolbar buttons (tooltips.js), deleting a contact
+(delete_contact.js), street and suburb on the contact card (edit_more.js), Import file matching on address and suburb (import.js),
+a whole street in one go from the Add Contacts window (street_import.js),
+phones and emails from ID4me onto existing cards (id4me.js) and the iPhone fit fixes (iphone.css). It also repairs a few markup mistakes in the
+CRM itself (see FIXES), and lets the page reach the map's address finder in
+its Content-Security-Policy (map tiles are images, which the policy already
+allows).
+
+make_blank_crm.py runs this at the end, so a regenerated blank CRM keeps them.
+"""
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ADDONS = os.path.join(HERE, 'addons')
+BEGIN, END = '<!-- ADDONS:BEGIN -->', '<!-- ADDONS:END -->'
+GEOCODER = 'https://nominatim.openstreetmap.org'
+
+
+def read(*p):
+    with open(os.path.join(ADDONS, *p), encoding='utf-8') as f:
+        return f.read()
+
+
+def block():
+    scripts = [
+        read('leftovers.js'),
+        read('vendor', 'leaflet.js'),
+        # keep any page variable called L untouched; the map uses CRM_LEAFLET
+        'window.CRM_LEAFLET = L.noConflict();',
+        read('theme.js'),
+        read('map.js'),
+        read('vendor_report.js'),
+        read('buyers.js'),
+        read('callrunner.js'),
+        read('receipts.js'),
+        read('fixes.js'),
+        read('tooltips.js'),
+        read('delete_contact.js'),
+        read('edit_more.js'),
+        read('import.js'),
+        read('street_import.js'),
+        read('id4me.js'),
+    ]
+    for s in scripts:
+        if '</script' in s.lower():
+            raise SystemExit('add_addons: a script contains </script>')
+    return (BEGIN + '\n<style>\n' + read('vendor', 'leaflet.css') + '\n' + read('theme.css') + '\n' + read('iphone.css') + '\n</style>\n'
+            + ''.join('<script>\n' + s + '\n</script>\n' for s in scripts) + END + '\n')
+
+
+# Markup fixes for the CRM itself. Each applies only if the problem is still
+# there, so a later copy of the CRM that has it fixed builds cleanly.
+FIXES = [
+    # The expenses table was wrapped in an unclosed <div id="buyers-table-wrap">,
+    # which put the Buyers window inside the (hidden) Expenses window: the
+    # Buyers button showed nothing. That opening tag belongs around the buyers
+    # table (which already has its closing tag), which "Group by property"
+    # hides and shows.
+    ('<div id="buyers-table-wrap"><table class="exp-table">', '<table class="exp-table">'),
+    ('<div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>',
+     '<div id="buyers-table-wrap"><div style="overflow-x:auto"><table class="feat-table"><thead><tr><th>Name</th><th>Phone</th>'),
+    # the summary tiles counted every stage except Listed and Sold, which always showed 0
+    ('var cnt = {hot:0,warm:0,potential:0,appraisal:0,msg:0,cold:0,declined:0};',
+     'var cnt = {hot:0,warm:0,potential:0,appraisal:0,msg:0,cold:0,declined:0,listed:0,sold:0};'),
+    # leftovers of the original agency in the AI assistant: sign off as the agent
+    ("Sign off as M&I team.';", "Sign off as '+ME.name+', '+ME.agency+'.';"),
+    ('M&amp;I AI assistant', 'MICRM AI assistant'),
+    # Reloading kept only one of two contacts with the same owner and address
+    # in different suburbs ("Owner not yet verified, 12 Example St" in two
+    # suburbs): contacts made in the browser are now told apart by suburb too.
+    ('      keyIndex[k] = i;',
+     "      keyIndex[k] = i; keyIndex[k+'|'+String(c.suburb||'').toLowerCase().trim()] = i;"),
+    ('      if (s.key && keyIndex[s.key] !== undefined) {',
+     "      var sk = s.key ? s.key+'|'+String(s.suburb||'').toLowerCase().trim() : '';\n"
+     "      if (s.isNew && s.key) {\n"
+     "        if (keyIndex[sk] !== undefined) idx = keyIndex[sk];\n"
+     "      } else if (s.key && keyIndex[s.key] !== undefined) {"),
+    ('        var exists = keyIndex[s.key];', '        var exists = keyIndex[sk];'),
+    ('          keyIndex[s.key]=data.length-1;', '          keyIndex[s.key]=data.length-1; keyIndex[sk]=data.length-1;'),
+    # "removed" (an old owner who has sold and gone) is a stage the agent set too:
+    # without it in this list a saved file re-guessed those contacts from their notes
+    # on opening, and old owners whose notes mention an appraisal came back as Appraised.
+    ("  var LOCKED = ['hold','declined','sold','listed','potential','hot','appraisal','warm','msg','cold'];",
+     "  var LOCKED = ['hold','declined','sold','listed','potential','hot','appraisal','warm','msg','cold','removed'];"),
+    # ...and opening a saved file moved old owners with an SMS or call log in their notes
+    # from "removed" to Message left
+    ("      var protect=['warm','hot','appraisal','listed','sold','declined','potential','hold'];",
+     "      var protect=['warm','hot','appraisal','listed','sold','declined','potential','hold','removed'];"),
+    # Every Export / Save added another saved-state block and kept the old ones, so the
+    # file grew with each save: the new block now replaces them (it holds everything).
+    ("  html = html.replace('</head>', seed+'\\n</head>');",
+     "  html = html.replace(/<script id=\"baked-state\">try\\{window\\.__BAKED_ACT=[\\s\\S]*?<\\/script>\\n?/g, '').replace('</head>', seed+'\\n</head>');"),
+    # Logging an email or text moved people on by its wording: "Complimentary appraisal
+    # sent" (an offer) counted as an appraisal done, and any email mentioning "appraisal"
+    # or "book" as a conversation (Warm). An email or text you send is now one-way contact
+    # only; and an offer, a cancelled or rebooked appraisal is never an appraisal done.
+    ("  // Explicit signals promote, but only on COMPLETED actions - a mention is not an outcome.\n  if(/not interested",
+     "  // An email or text you send is one-way: it shows neither interest nor an appraisal done\n"
+     "  var oneWay = /email|e-mail|sms|text|newsletter|letter|flyer|brochure|mail ?out/.test(String(type||'').toLowerCase()) && !/repl|respond|answered|spoke|called back/.test(t);\n"
+     "  // Explicit signals promote, but only on COMPLETED actions - a mention is not an outcome.\n"
+     "  if(oneWay){\n    if(protect.indexOf(c.stage)===-1) c.stage='msg';\n  } else if(/not interested"),
+    ("  } else if(/appraisal (done|completed|carried out|delivered|sent|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t)){",
+     "  } else if(/appraisal (done|completed|carried out|delivered|presented)|appraised at|did the appraisal|gave them a price|price provided/.test(t) && !/offer|cancel|not a live|rebook/.test(t)){"),
+    # Expenses saved in a file only loaded when the browser already had some, so a file
+    # opened on a new computer (or a fresh browser) showed no expenses at all.
+    ("try{ if(_savedExp && Array.isArray(window.__BAKED_EXPENSES)){",
+     "try{ if(Array.isArray(window.__BAKED_EXPENSES) && window.__BAKED_EXPENSES.length){ _savedExp=_savedExp||[];"),
+    # Saving a card put a Cold or Message-left contact back to Appraised whenever it had
+    # an appraisal date, so moving it on never stuck. Now only a newly entered date does.
+    ("  data[id].apprDate = document.getElementById('e-appr').value.trim();",
+     "  var _prevAppr = data[id].apprDate || '';\n  data[id].apprDate = document.getElementById('e-appr').value.trim();"),
+    ("  if (data[id].apprDate && (data[id].stage==='cold'||data[id].stage==='msg')) data[id].stage = 'appraisal';",
+     "  if (data[id].apprDate && data[id].apprDate !== _prevAppr && (data[id].stage==='cold'||data[id].stage==='msg')) data[id].stage = 'appraisal';"),
+]
+
+
+def fix_markup(html):
+    for old, new in FIXES:
+        if html.count(old) == 1 and (new in old or new not in html):   # once only
+            html = html.replace(old, new)
+    return html
+
+
+def add_addons(html):
+    html = re.sub(re.escape(BEGIN) + r'.*?' + re.escape(END) + r'\n?', '', html, flags=re.S)
+    html = fix_markup(html)
+    i = html.rfind('</body>')
+    if i < 0:
+        raise SystemExit('add_addons: </body> not found')
+    html = html[:i] + block() + html[i:]
+    # the address finder must be reachable from the page
+    m = re.search(r'(<meta http-equiv="Content-Security-Policy" content=")([^"]*)(")', html)
+    if m and GEOCODER not in m.group(2):
+        csp = m.group(2)
+        if re.search(r'(^|;)\s*connect-src', csp):
+            csp = re.sub(r'((?:^|;)\s*connect-src)', r'\1 ' + GEOCODER, csp, count=1)
+        else:
+            csp = re.sub(r'((?:^|;)\s*default-src)', r'\1 ' + GEOCODER, csp, count=1)
+        html = html[:m.start(2)] + csp + html[m.end(2):]
+    # receipts are shown from the browser's own file storage (blob: addresses)
+    m = re.search(r'(<meta http-equiv="Content-Security-Policy" content=")([^"]*)(")', html)
+    if m and re.search(r'img-src(?![^;]*blob:)', m.group(2)):
+        csp = re.sub(r'(img-src)', r'\1 blob:', m.group(2), count=1)
+        html = html[:m.start(2)] + csp + html[m.end(2):]
+    return html
+
+
+def main(path):
+    with open(path, encoding='utf-8') as f:
+        html = f.read()
+    html = add_addons(html)
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(html)
+    print('added map and vendor reports to %s (%d KB)' % (path, len(html.encode('utf-8')) // 1024))
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        raise SystemExit('usage: add_addons.py CRM.html')
+    main(sys.argv[1])

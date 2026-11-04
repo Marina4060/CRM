@@ -1,0 +1,93 @@
+/* ══ Colours: Midnight & Gold ══
+   A deep navy top bar with light "glass" buttons, gold for the main actions
+   (Call Runner, Add Contact) and the Today button, a warm cream background
+   and calm stage colours. Many buttons carry their colours in a
+   style="" attribute, so these rules need !important. */
+:root{
+  --crm-accent:#E3A92B; --crm-accent-soft:rgba(227,169,43,.18); --crm-accent-ink:#1A1203;
+  --crm-bar:#0B1F3A; --crm-bar2:#13294B; --crm-today:#F2C94C;
+  --crm-ink:#101828; --crm-ink2:#475467; --crm-ink3:#98A2B3;
+  --crm-line:#E4E7EC; --crm-line2:#D0D5DD; --crm-canvas:#F5F2EA;
+  --bg3:#F5F2EA; --t1:#101828; --t2:#475467; --t3:#667085;
+}
+body{background:var(--crm-canvas)}
+
+/* top bar: deep navy, light text */
+.topbar{background:linear-gradient(180deg,var(--crm-bar),var(--crm-bar2)) !important;border-bottom:0 !important;box-shadow:0 2px 8px rgba(11,31,58,.22) !important}
+.topbar .logo,.topbar .logo span{color:#fff !important;text-shadow:none !important}
+.topbar .logo span{color:var(--crm-accent) !important}
+.topbar .pill{background:rgba(255,255,255,.1) !important;color:#fff !important;border-color:rgba(255,255,255,.25) !important}
+.topbar div[style*="1D9E75"]{color:#F3D58A !important}
+.topbar button[onclick="clearStorage()"]{color:#F3D58A !important;border-color:rgba(243,213,138,.5) !important}
+/* every other top-bar button is light glass on the navy */
+.topbar .cal-btn-top,.topbar .diary-open-btn,.topbar .ai-btn,.topbar [class*="soft-"]{
+  background:rgba(255,255,255,.08) !important;color:#E8EEF7 !important;border:1px solid rgba(255,255,255,.18) !important;
+  font-weight:500 !important;border-radius:8px !important;box-shadow:none !important;transform:none !important}
+.topbar .cal-btn-top:not(.crm-primary):not(.crm-today):hover,.topbar .diary-open-btn:not(.crm-primary):not(.crm-today):hover,.topbar .ai-btn:not(.crm-primary):not(.crm-today):hover{background:rgba(255,255,255,.18) !important;border-color:rgba(255,255,255,.35) !important}
+/* each kind of task in its own colour (classes set by theme.js); suburb and view tabs stay plain */
+.topbar .soft-blue{background:rgba(96,165,250,.34) !important;border-color:rgba(147,197,253,.55) !important;color:#E0EDFF !important}
+.topbar .soft-green{background:rgba(52,211,153,.3) !important;border-color:rgba(110,231,183,.5) !important;color:#DDFBEF !important}
+.topbar .soft-lilac{background:rgba(167,139,250,.36) !important;border-color:rgba(196,181,253,.55) !important;color:#EEE8FF !important}
+.topbar .soft-sand{background:rgba(251,191,36,.3) !important;border-color:rgba(252,211,77,.5) !important;color:#FFF3D6 !important}
+.topbar .soft-rose{background:rgba(244,114,182,.32) !important;border-color:rgba(249,168,212,.5) !important;color:#FFE4F1 !important}
+.topbar .soft-grey{background:rgba(255,255,255,.1) !important;border-color:rgba(255,255,255,.28) !important;color:#E8EEF7 !important}
+.topbar [class*="soft-"]:hover{filter:brightness(1.25)}
+/* the main actions */
+.topbar .crm-primary{background:var(--crm-accent) !important;color:var(--crm-accent-ink) !important;border-color:var(--crm-accent) !important;font-weight:600 !important;box-shadow:0 2px 10px rgba(227,169,43,.4) !important}
+.topbar .crm-primary:hover{filter:brightness(1.08)}
+.topbar .crm-today{background:var(--crm-today) !important;color:var(--crm-accent-ink) !important;border:1px solid var(--crm-today) !important;font-weight:600 !important}
+.topbar .crm-today:hover{filter:brightness(1.05)}
+.search{background:#fff !important;border:1px solid var(--crm-line2) !important;box-shadow:none !important;border-radius:8px !important}
+.search:focus{border-color:var(--crm-accent) !important;box-shadow:0 0 0 3px var(--crm-accent-soft) !important}
+.topbar .vtabs{background:rgba(255,255,255,.08) !important;border:1px solid rgba(255,255,255,.18) !important}
+.topbar .vtab{color:#C9D3E3 !important}
+.topbar .vtab.on{background:#fff !important;color:var(--crm-bar) !important;box-shadow:0 1px 2px rgba(16,24,40,.15)}
+.vtabs{background:#F2F4F7 !important;border:1px solid var(--crm-line) !important}
+.vtab{color:var(--crm-ink2) !important}
+.vtab.on{background:#fff !important;color:var(--crm-ink) !important;box-shadow:0 1px 2px rgba(16,24,40,.1)}
+#save-badge{background:rgba(255,255,255,.12) !important;color:#fff !important}
+/* the suburb buttons wrap onto as many rows as they need instead of running off the screen */
+.topbar .vtabs:has(> #sub-all){flex-wrap:wrap;flex-basis:100%;max-width:100%;border-radius:14px;row-gap:4px;margin-left:0}
+.topbar .vtabs:has(> #sub-all) .vtab{flex:0 0 auto;white-space:nowrap}
+
+/* summary tiles */
+.sm{background:#fff !important;border:1px solid var(--crm-line);border-radius:10px !important}
+.sm-val{color:var(--crm-ink) !important;font-weight:600 !important}
+
+/* lanes: white header with a thin stage-coloured line on top */
+.lane-head{background:var(--lane-soft,#fff) !important;border:1px solid var(--crm-line);border-bottom:0;border-top:3px solid var(--lane,#98A2B3)}
+.lane-body{background:#F9FAFB !important;border:1px solid var(--crm-line);border-top:0}
+.lane-title{font-weight:600 !important}
+.lane-badge{background:#F2F4F7 !important;color:#344054 !important}
+.hot-h{--lane-soft:#FEF6F5;--lane:#D92D20}.hot-t{color:#B42318 !important}
+.warm-h{--lane-soft:#FFF9EE;--lane:#DC6803}.warm-t{color:#B54708 !important}
+.pot-h{--lane-soft:#F5F7FA;--lane:#7A8BA3}.pot-t{color:#475467 !important}
+.apr-h{--lane-soft:#F7F5FE;--lane:#7F56D9}.apr-t{color:#6941C6 !important}
+.msg-h{--lane-soft:#F2F8FF;--lane:#2E90FA}.msg-t{color:#175CD3 !important}
+.cold-h{--lane-soft:#F6F7F9;--lane:#98A2B3}.cold-t{color:#475467 !important}
+.dcl-h{--lane-soft:#FBF3F2;--lane:#912018}.dcl-t{color:#912018 !important}
+.list-h{--lane-soft:#F0FAF4;--lane:#12B76A}.list-t{color:#067647 !important}
+.sold-h{--lane-soft:#EEF8F2;--lane:#087443}.sold-t{color:#085D3A !important}
+
+/* contact cards */
+.card{border:1px solid var(--crm-line) !important;border-radius:10px !important;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.card:hover{border-color:var(--crm-accent) !important}
+.card-name{color:var(--crm-ink);font-weight:600 !important}
+.card-top > span{background:#F2F4F7 !important;color:#344054 !important;font-weight:600 !important}
+.copy-nm{background:#F2F4F7 !important;color:#475467 !important;border-color:var(--crm-line2) !important}
+
+/* pop-up windows */
+.feat-head,.exp-head{background:#fff !important;border-bottom:1px solid var(--crm-line) !important}
+.feat-title,.exp-title{color:var(--crm-ink) !important}
+.feat-head [style*="color"],.exp-head [style*="color"]{color:var(--crm-ink2) !important}
+.feat-close,.exp-close{color:var(--crm-ink2) !important}
+.feat-add,.exp-add-btn,.cr-start-btn,.cr-save-next{background:var(--crm-accent) !important;color:var(--crm-accent-ink) !important;border-color:var(--crm-accent) !important}
+.feat-print,.exp-print-btn{background:#fff !important;color:#344054 !important;border:1px solid var(--crm-line2) !important}
+.feat-tab.on{color:var(--crm-ink) !important}
+.cr-progress-bar{background:var(--crm-accent) !important}
+.cr-note-prev{background:#F9FAFB !important;border:1px solid var(--crm-line)}
+
+/* street labels on cards: beside the name when there is room, on their own line when not */
+.card-top{flex-wrap:wrap;gap:4px 6px}
+.card-name{flex:1 1 9em;min-width:0}
+.card-top > span{flex:0 0 auto;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px !important;line-height:1.3;padding:2px 8px !important}
